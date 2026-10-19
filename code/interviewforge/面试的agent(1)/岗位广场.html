@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>InterviewForge · 岗位广场</title>
+<link rel="stylesheet" href="styles/forge.css">
+<style>
+  .hero { padding:54px 0 30px; }
+  .hero-grid { display:grid; grid-template-columns:1.25fr .9fr; gap:48px; align-items:center; }
+  .hero h1 { font-size:46px; line-height:1.06; letter-spacing:-0.03em; }
+  .hero h1 .accent { background:linear-gradient(120deg,var(--brand-600),var(--ember-500)); -webkit-background-clip:text; background-clip:text; color:transparent; }
+  .hero p.lede { font-size:17px; color:var(--ink-600); max-width:520px; margin-top:18px; line-height:1.62; }
+  .hero-cta { display:flex; gap:12px; margin-top:28px; }
+  .trust { display:flex; gap:26px; margin-top:32px; }
+  .trust .t-num { font-family:var(--font-display); font-size:24px; font-weight:700; color:var(--ink-950); }
+  .trust .t-lab { font-size:12.5px; color:var(--ink-500); margin-top:1px; }
+
+  /* hero side card — a mini "how it works" */
+  .flowcard { background:var(--paper); border:1px solid var(--ink-200); border-radius:var(--r-xl); box-shadow:var(--sh-lg); padding:22px; }
+  .flowcard .fc-head { display:flex; align-items:center; gap:9px; font-size:13px; font-weight:700; color:var(--ink-800); }
+  .flowcard .fc-head .ph { width:7px; height:7px; border-radius:50%; background:var(--ember-500); box-shadow:0 0 0 4px var(--ember-100); }
+  .fstep { display:flex; gap:13px; padding:13px 4px; position:relative; }
+  .fstep:not(:last-child)::before { content:""; position:absolute; left:16px; top:38px; bottom:-2px; width:2px; background:var(--ink-200); }
+  .fstep .fn { width:33px; height:33px; border-radius:10px; flex:none; display:grid; place-items:center; font-family:var(--font-mono); font-weight:600; font-size:13px; z-index:1; }
+  .fstep .ft { font-size:13.5px; font-weight:600; color:var(--ink-900); }
+  .fstep .fd { font-size:12.5px; color:var(--ink-500); margin-top:2px; line-height:1.5; }
+
+  /* filter bar */
+  .filters { display:flex; align-items:center; gap:10px; padding:16px 0 22px; flex-wrap:wrap; }
+  .seg { display:flex; gap:4px; padding:4px; background:var(--paper); border:1px solid var(--ink-200); border-radius:var(--r-md); box-shadow:var(--sh-xs); }
+  .seg button { height:32px; padding:0 14px; border-radius:var(--r-sm); font-size:13px; font-weight:600; color:var(--ink-600); white-space:nowrap; }
+  .board-head h2 span { white-space:nowrap; }
+  .seg button.on { background:var(--ink-900); color:#fff; }
+  .search { flex:1; min-width:200px; display:flex; align-items:center; gap:9px; height:42px; padding:0 14px; background:var(--paper); border:1px solid var(--ink-200); border-radius:var(--r-md); box-shadow:var(--sh-xs); color:var(--ink-400); }
+  .search svg { width:17px; height:17px; }
+  .search input { border:none; outline:none; flex:1; font-family:inherit; font-size:14px; color:var(--ink-800); background:none; }
+
+  .board-head { display:flex; align-items:baseline; justify-content:space-between; margin-bottom:16px; }
+  .board-head h2 { font-size:19px; }
+
+  /* job grid */
+  .grid { display:grid; grid-template-columns:repeat(3,1fr); gap:18px; }
+  .job {
+    background:var(--paper); border:1px solid var(--ink-200); border-radius:var(--r-lg);
+    padding:20px; display:flex; flex-direction:column; gap:14px;
+    transition:transform .14s ease, box-shadow .18s ease, border-color .18s;
+    box-shadow:var(--sh-xs); position:relative; overflow:hidden;
+  }
+  .job:hover { transform:translateY(-3px); box-shadow:var(--sh-md); border-color:var(--ink-300); }
+  .job.feat { border-color:var(--brand-300); box-shadow:0 0 0 1px var(--brand-300), var(--sh-md); }
+  .job.feat::before { content:""; position:absolute; inset:0 0 auto 0; height:3px; background:linear-gradient(90deg,var(--brand-500),var(--ember-500)); }
+  .job-top { display:flex; align-items:flex-start; gap:12px; }
+  .logo { width:44px; height:44px; border-radius:12px; flex:none; display:grid; place-items:center; font-family:var(--font-display); font-weight:700; font-size:17px; color:#fff; }
+  .job-title { font-family:var(--font-display); font-size:16.5px; font-weight:600; color:var(--ink-950); letter-spacing:-0.01em; }
+  .job-co { font-size:13px; color:var(--ink-500); margin-top:2px; }
+  .job-meta { display:flex; align-items:center; gap:7px; flex-wrap:wrap; font-size:13px; }
+  .job-salary { font-family:var(--font-display); font-weight:700; color:var(--ember-600); font-size:15px; }
+  .sep { color:var(--ink-300); }
+  .skills { display:flex; flex-wrap:wrap; gap:6px; }
+  .job-foot { display:flex; align-items:center; justify-content:space-between; margin-top:auto; padding-top:14px; border-top:1px solid var(--ink-100); }
+  .applybtn { display:inline-flex; align-items:center; gap:7px; height:38px; padding:0 16px; border-radius:var(--r-md); font-weight:600; font-size:13.5px; }
+  .match { display:flex; align-items:center; gap:7px; font-size:12.5px; color:var(--ink-500); }
+  .match b { font-family:var(--font-display); color:var(--green-600); font-size:14px; }
+</style>
+</head>
+<body>
+
+<!-- ============ NAV ============ -->
+<nav class="nav">
+  <div class="shell">
+    <div class="brand">
+      <span class="glyph">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M12 2.5l2.2 6.1 6.3.3-4.9 4 1.7 6.1L12 19.4 6.7 23l1.7-6.1-4.9-4 6.3-.3z" fill="#fff" opacity=".95"/></svg>
+      </span>
+      InterviewForge
+    </div>
+    <div class="nav-links">
+      <a href="岗位广场.html" class="active">岗位广场</a>
+      <a href="投递准备.html">我的投递</a>
+      <a href="面试主界面.html">模拟面试</a>
+      <a href="评分报告.html">面试报告</a>
+    </div>
+    <div class="grow"></div>
+    <div class="row" style="gap:12px;">
+      <span class="badge badge-ink mono">v0.9 · harness</span>
+      <div class="avatar avatar-user" style="width:34px;height:34px;font-size:13px;">林</div>
+    </div>
+  </div>
+</nav>
+
+<!-- ============ HERO ============ -->
+<header class="hero">
+  <div class="shell hero-grid">
+    <div>
+      <span class="eyebrow">AI 模拟面试官 · 读简历 · 对着 JD 出题</span>
+      <h1 style="margin-top:14px;">挑一个岗位，<br>来一场<span class="accent">真刀真枪</span>的模拟面试</h1>
+      <p class="lede">不是刷题库。它会读你的简历、对着这份 JD 出题，顺着你的回答一路深挖追问——像真面试官一样，结束后给出每个维度的结构化评分。</p>
+      <div class="hero-cta">
+        <a href="投递准备.html" class="btn btn-primary btn-lg">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          投递简历，开始面试
+        </a>
+        <a href="#board" class="btn btn-ghost btn-lg">浏览全部岗位</a>
+      </div>
+      <div class="trust">
+        <div><div class="t-num">5</div><div class="t-lab">岗位方法论 Skills</div></div>
+        <div class="vr" style="height:34px;"></div>
+        <div><div class="t-num">6 维</div><div class="t-lab">结构化评分</div></div>
+        <div class="vr" style="height:34px;"></div>
+        <div><div class="t-num">全程</div><div class="t-lab">trace 可重放</div></div>
+      </div>
+    </div>
+
+    <div class="flowcard">
+      <div class="fc-head"><span class="ph"></span>它是怎么运作的</div>
+      <div style="margin-top:10px;">
+        <div class="fstep">
+          <span class="fn" style="background:var(--brand-50);color:var(--brand-700);">0</span>
+          <div><div class="ft">解析 JD × 简历</div><div class="fd">提取技能交叉点与缺口，构建候选人画像</div></div>
+        </div>
+        <div class="fstep">
+          <span class="fn" style="background:var(--brand-50);color:var(--brand-700);">1</span>
+          <div><div class="ft">规划面试结构</div><div class="fd">加载岗位 Skill，定下考几道、每道考什么</div></div>
+        </div>
+        <div class="fstep">
+          <span class="fn" style="background:var(--ember-100);color:var(--ember-700);">2</span>
+          <div><div class="ft">多轮出题 · 追问</div><div class="fd">答得好加难度，答得卡给提示，顺着回答深挖</div></div>
+        </div>
+        <div class="fstep">
+          <span class="fn" style="background:var(--green-100);color:var(--green-700);">3</span>
+          <div><div class="ft">结构化评分报告</div><div class="fd">每维度得分 + 强弱点 + 与 JD 匹配度</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- ============ BOARD ============ -->
+<main class="shell" id="board" style="padding-bottom:20px;">
+  <div class="filters">
+    <div class="seg">
+      <button class="on">全部</button>
+      <button>后端</button>
+      <button>前端</button>
+      <button>算法</button>
+      <button>系统设计</button>
+    </div>
+    <div class="search">
+      <svg viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2"/><path d="M20 20l-3-3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      <input placeholder="搜索岗位、公司或技术栈，如 Redis、分布式…">
+    </div>
+    <button class="btn btn-ghost btn-sm">城市 · 全部 ▾</button>
+    <button class="btn btn-ghost btn-sm">薪资 ▾</button>
+  </div>
+
+  <div class="board-head">
+    <h2>为你推荐 · 后端方向 <span class="muted" style="font-size:14px;font-weight:500;">128 个岗位</span></h2>
+    <span class="muted" style="font-size:13px;">按简历匹配度排序</span>
+  </div>
+
+  <div class="grid">
+
+    <!-- FEATURED backend role (the sample) -->
+    <article class="job feat">
+      <div class="row" style="gap:8px;">
+        <span class="badge badge-ember"><svg viewBox="0 0 24 24" fill="none"><path d="M12 2.5l2.2 6.1 6.3.3-4.9 4 1.7 6.1L12 19.4 6.7 23l1.7-6.1-4.9-4 6.3-.3z" fill="currentColor"/></svg>简历高度匹配</span>
+        <span class="badge badge-red">急招</span>
+      </div>
+      <div class="job-top">
+        <div class="logo" style="background:linear-gradient(145deg,#4F46E5,#312E81);">云</div>
+        <div class="grow">
+          <div class="job-title">资深后端工程师</div>
+          <div class="job-co">云启科技 · 基础架构组 · D轮</div>
+        </div>
+      </div>
+      <div class="job-meta">
+        <span class="job-salary">30-55K · 16薪</span>
+        <span class="sep">·</span><span class="muted">上海</span>
+        <span class="sep">·</span><span class="muted">3-5 年</span>
+      </div>
+      <div class="skills">
+        <span class="tag-mono">Redis</span><span class="tag-mono">高并发</span>
+        <span class="tag-mono">分布式</span><span class="tag-mono">MySQL</span><span class="tag-mono">Go</span>
+      </div>
+      <div class="job-foot">
+        <div class="match">画像匹配 <b>92%</b></div>
+        <a href="投递准备.html" class="applybtn btn-primary">
+          投递并面试
+          <svg viewBox="0 0 24 24" fill="none"><path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </a>
+      </div>
+    </article>
+
+    <!-- others -->
+    <article class="job">
+      <div class="job-top">
+        <div class="logo" style="background:linear-gradient(145deg,#0EA5E9,#0369A1);">数</div>
+        <div class="grow"><div class="job-title">后端开发工程师</div><div class="job-co">数珩数据 · B轮</div></div>
+      </div>
+      <div class="job-meta"><span class="job-salary">25-45K</span><span class="sep">·</span><span class="muted">北京</span><span class="sep">·</span><span class="muted">3-5 年</span></div>
+      <div class="skills"><span class="tag-mono">Java</span><span class="tag-mono">Spring</span><span class="tag-mono">Kafka</span><span class="tag-mono">微服务</span></div>
+      <div class="job-foot"><div class="match">画像匹配 <b style="color:var(--brand-600)">78%</b></div><a href="投递准备.html" class="applybtn btn-ghost">投递并面试</a></div>
+    </article>
+
+    <article class="job">
+      <div class="job-top">
+        <div class="logo" style="background:linear-gradient(145deg,#F97316,#C2410C);">极</div>
+        <div class="grow"><div class="job-title">后端工程师 · Go 方向</div><div class="job-co">极光出行 · 上市公司</div></div>
+      </div>
+      <div class="job-meta"><span class="job-salary">26-46K</span><span class="sep">·</span><span class="muted">成都</span><span class="sep">·</span><span class="muted">2-4 年</span></div>
+      <div class="skills"><span class="tag-mono">Go</span><span class="tag-mono">gRPC</span><span class="tag-mono">PostgreSQL</span><span class="tag-mono">K8s</span></div>
+      <div class="job-foot"><div class="match">画像匹配 <b style="color:var(--brand-600)">81%</b></div><a href="投递准备.html" class="applybtn btn-ghost">投递并面试</a></div>
+    </article>
+
+    <article class="job">
+      <div class="job-top">
+        <div class="logo" style="background:linear-gradient(145deg,#7C3AED,#5B21B6);">玄</div>
+        <div class="grow"><div class="job-title">算法工程师 · 推荐</div><div class="job-co">玄策 AI · C轮</div></div>
+      </div>
+      <div class="job-meta"><span class="job-salary">40-70K</span><span class="sep">·</span><span class="muted">杭州</span><span class="sep">·</span><span class="muted">硕士优先</span></div>
+      <div class="skills"><span class="tag-mono">推荐系统</span><span class="tag-mono">PyTorch</span><span class="tag-mono">召回排序</span></div>
+      <div class="job-foot"><div class="match">画像匹配 <b style="color:var(--amber-600)">64%</b></div><a href="投递准备.html" class="applybtn btn-ghost">投递并面试</a></div>
+    </article>
+
+    <article class="job">
+      <div class="job-top">
+        <div class="logo" style="background:linear-gradient(145deg,#059669,#047857);">织</div>
+        <div class="grow"><div class="job-title">高级前端工程师</div><div class="job-co">织云 · 远程友好</div></div>
+      </div>
+      <div class="job-meta"><span class="job-salary">28-50K</span><span class="sep">·</span><span class="muted">远程</span><span class="sep">·</span><span class="muted">3-5 年</span></div>
+      <div class="skills"><span class="tag-mono">React</span><span class="tag-mono">TypeScript</span><span class="tag-mono">性能优化</span></div>
+      <div class="job-foot"><div class="match">画像匹配 <b style="color:var(--amber-600)">59%</b></div><a href="投递准备.html" class="applybtn btn-ghost">投递并面试</a></div>
+    </article>
+
+    <article class="job">
+      <div class="job-top">
+        <div class="logo" style="background:linear-gradient(145deg,#334155,#0F172A);">磐</div>
+        <div class="grow"><div class="job-title">系统架构师</div><div class="job-co">磐石云 · 上市公司</div></div>
+      </div>
+      <div class="job-meta"><span class="job-salary">50-80K</span><span class="sep">·</span><span class="muted">深圳</span><span class="sep">·</span><span class="muted">7 年+</span></div>
+      <div class="skills"><span class="tag-mono">分布式</span><span class="tag-mono">高可用</span><span class="tag-mono">容量规划</span></div>
+      <div class="job-foot"><div class="match">画像匹配 <b style="color:var(--amber-600)">55%</b></div><a href="投递准备.html" class="applybtn btn-ghost">投递并面试</a></div>
+    </article>
+
+  </div>
+</main>
+
+<footer class="shell foot">
+  <div class="between">
+    <div class="row" style="gap:8px;color:var(--ink-500);">
+      <span class="brand" style="font-size:15px;color:var(--ink-700);"><span class="glyph" style="width:24px;height:24px;border-radius:7px;"><svg viewBox="0 0 24 24" fill="none"><path d="M12 2.5l2.2 6.1 6.3.3-4.9 4 1.7 6.1L12 19.4 6.7 23l1.7-6.1-4.9-4 6.3-.3z" fill="#fff"/></svg></span>InterviewForge</span>
+    </div>
+    <span>Agent = Model + Harness · 本产品几乎全是 Harness</span>
+  </div>
+</footer>
+
+</body>
+</html>

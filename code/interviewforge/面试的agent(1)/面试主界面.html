@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>InterviewForge · 面试主界面 · 3 个方向</title>
+<link rel="stylesheet" href="styles/forge.css">
+<style>
+  .wide { max-width:1280px; margin:0 auto; padding:0 40px; }
+  .page { padding:30px 0 70px; }
+  .crumb { display:flex; align-items:center; gap:8px; font-size:13px; color:var(--ink-400); margin-bottom:18px; }
+  .crumb a:hover { color:var(--ink-700); } .crumb .c-now { color:var(--ink-700); font-weight:600; }
+  .head { margin-bottom:10px; }
+  .head h1 { font-size:30px; letter-spacing:-0.025em; }
+  .head p { color:var(--ink-500); font-size:15px; margin-top:8px; max-width:720px; }
+
+  .stepwrap { background:var(--paper); border:1px solid var(--ink-200); border-radius:var(--r-lg); padding:18px 24px; box-shadow:var(--sh-xs); margin:22px 0 30px; }
+
+  .variant { margin-bottom:42px; }
+  .v-head { display:flex; align-items:flex-start; gap:16px; margin-bottom:16px; }
+  .v-badge { width:46px; height:46px; border-radius:13px; flex:none; display:grid; place-items:center; font-family:var(--font-display); font-weight:700; font-size:22px; color:#fff; box-shadow:var(--sh-sm); }
+  .v-title { font-family:var(--font-display); font-size:20px; font-weight:600; color:var(--ink-950); letter-spacing:-0.01em; }
+  .v-tagline { font-size:14px; color:var(--ink-600); margin-top:4px; max-width:640px; line-height:1.55; }
+  .v-tags { display:flex; gap:7px; margin-top:10px; flex-wrap:wrap; }
+  .v-open { margin-left:auto; }
+
+  .frame { width:100%; border-radius:var(--r-xl); overflow:hidden; box-shadow:var(--sh-lg); border:1px solid var(--ink-200); background:#fff; position:relative; }
+  .frame .scaler { width:1280px; height:864px; transform-origin:top left; }
+  .frame iframe { width:1280px; height:864px; border:0; display:block; pointer-events:none; }
+
+  .verdict { display:flex; gap:18px; margin-top:8px; }
+  .vd { flex:1; padding:14px 16px; border-radius:var(--r-md); font-size:13px; line-height:1.5; }
+  .vd .vd-h { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; margin-bottom:6px; }
+  .vd.pro { background:var(--green-50); border:1px solid #A7F3D0; } .vd.pro .vd-h { color:var(--green-700); }
+  .vd.con { background:#FFFBEB; border:1px solid #FDE68A; } .vd.con .vd-h { color:var(--amber-600); }
+  .vd.fit { background:var(--brand-50); border:1px solid var(--brand-100); } .vd.fit .vd-h { color:var(--brand-700); }
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="shell">
+    <div class="brand">
+      <span class="glyph"><svg viewBox="0 0 24 24" fill="none"><path d="M12 2.5l2.2 6.1 6.3.3-4.9 4 1.7 6.1L12 19.4 6.7 23l1.7-6.1-4.9-4 6.3-.3z" fill="#fff" opacity=".95"/></svg></span>
+      InterviewForge
+    </div>
+    <div class="nav-links">
+      <a href="岗位广场.html">岗位广场</a>
+      <a href="投递准备.html">我的投递</a>
+      <a href="面试主界面.html" class="active">模拟面试</a>
+      <a href="评分报告.html">面试报告</a>
+    </div>
+    <div class="grow"></div>
+    <span class="phase-pill" style="background:var(--ember-50);color:var(--ember-700);"><span class="dot" style="background:var(--ember-500);"></span>Phase · EXECUTE</span>
+  </div>
+</nav>
+
+<main class="wide page">
+  <div class="crumb">
+    <a href="面试规划.html">面试规划</a><span>/</span><span class="c-now">多轮面试主界面</span>
+  </div>
+  <div class="head">
+    <h1>面试主界面 · 3 个方向对比</h1>
+    <p>同一时刻（第 2 题 · 验证简历"精通 Redis"的追问）下，三种界面方向。场景完全一致，方便对比交互重心与视觉气质。从「稳」到「工程感」到「沉浸」依次展开。</p>
+  </div>
+
+  <div class="stepwrap">
+    <div class="stepper">
+      <div class="step"><span class="step-num done"><svg viewBox="0 0 24 24" fill="none" width="13" height="13"><path d="M5 13l4 4L19 7" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="step-label done">投递准备</span></div>
+      <div class="step-line done"></div>
+      <div class="step"><span class="step-num done"><svg viewBox="0 0 24 24" fill="none" width="13" height="13"><path d="M5 13l4 4L19 7" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="step-label done">面试规划</span></div>
+      <div class="step-line done"></div>
+      <div class="step"><span class="step-num now">2</span><span class="step-label now">多轮面试</span></div>
+      <div class="step-line"></div>
+      <div class="step"><span class="step-num todo">3</span><span class="step-label todo">评分报告</span></div>
+    </div>
+  </div>
+
+  <!-- Direction A -->
+  <section class="variant">
+    <div class="v-head">
+      <span class="v-badge" style="background:linear-gradient(150deg,#4F46E5,#312E81);">A</span>
+      <div>
+        <div class="v-title">对话流 + 进度侧栏</div>
+        <div class="v-tagline">最稳妥的 SaaS 范式：左侧题目进度与画像，中间气泡对话流，底部作答框。AI 把评分要点（rubric）摊在问题里，信息层级清晰、上手零成本。</div>
+        <div class="v-tags"><span class="badge badge-brand">经典 · 稳</span><span class="badge badge-ink">对话气泡</span><span class="badge badge-ink">进度可见</span></div>
+      </div>
+      <a href="面试-A-对话流.html" target="_blank" class="btn btn-ghost btn-sm v-open">打开完整页面 ↗</a>
+    </div>
+    <div class="frame"><div class="scaler" id="sc-a"><iframe src="面试-A-对话流.html" title="方向A" scrolling="no"></iframe></div></div>
+    <div class="verdict">
+      <div class="vd pro"><div class="vd-h">优势</div>认知负担低、求职者熟悉，对话历史完整可回看，rubric 透明。</div>
+      <div class="vd con"><div class="vd-h">取舍</div>底层 harness 的"工程味"被隐藏，演示架构卖点时不够直观。</div>
+      <div class="vd fit"><div class="vd-h">适合</div>面向求职者的正式产品主线，追求信任感与可用性。</div>
+    </div>
+  </section>
+
+  <!-- Direction B -->
+  <section class="variant">
+    <div class="v-head">
+      <span class="v-badge" style="background:linear-gradient(150deg,#0F172A,#1E293B);">B</span>
+      <div>
+        <div class="v-title">聚焦单题 + Harness 实时可视化</div>
+        <div class="v-tagline">左侧极简时间线，中间只聚焦当前一道题，右侧深色 Runtime 面板实时显示 PEV 相位、Examiner / Grader 子 agent、记忆事件与上下文窗口占用——把"模型外的工程"全摊开。</div>
+        <div class="v-tags"><span class="badge badge-violet">工程感 · 信息密度高</span><span class="badge badge-ink">PEV 可视</span><span class="badge badge-ink">子 agent / 记忆</span></div>
+      </div>
+      <a href="面试-B-Harness.html" target="_blank" class="btn btn-ghost btn-sm v-open">打开完整页面 ↗</a>
+    </div>
+    <div class="frame"><div class="scaler" id="sc-b"><iframe src="面试-B-Harness.html" title="方向B" scrolling="no"></iframe></div></div>
+    <div class="verdict">
+      <div class="vd pro"><div class="vd-h">优势</div>直接展示架构卖点（PEV / 子 agent / 五层压缩 / pinned），单题聚焦减少干扰。</div>
+      <div class="vd con"><div class="vd-h">取舍</div>信息量大，对普通求职者偏"重"，更像开发者 / 演示视角。</div>
+      <div class="vd fit"><div class="vd-h">适合</div>技术评审、作品集 Demo、面试讲解 harness 工程时。</div>
+    </div>
+  </section>
+
+  <!-- Direction C -->
+  <section class="variant">
+    <div class="v-head">
+      <span class="v-badge" style="background:linear-gradient(150deg,#6366F1,#4338CA);">C</span>
+      <div>
+        <div class="v-title">沉浸式面试间</div>
+        <div class="v-tagline">深色环境 + 有人设的 AI 面试官「Forge」，呼吸光圈与"正在追问"状态营造真实面试临场感，问题居中放大，玻璃质感作答框支持语音。弱化仪表盘，强化对话氛围。</div>
+        <div class="v-tags"><span class="badge badge-ember">沉浸 · 人性化</span><span class="badge badge-ink">AI 人设</span><span class="badge badge-ink">语音作答</span></div>
+      </div>
+      <a href="面试-C-面试间.html" target="_blank" class="btn btn-ghost btn-sm v-open">打开完整页面 ↗</a>
+    </div>
+    <div class="frame"><div class="scaler" id="sc-c"><iframe src="面试-C-面试间.html" title="方向C" scrolling="no"></iframe></div></div>
+    <div class="verdict">
+      <div class="vd pro"><div class="vd-h">优势</div>临场感强、情绪压力贴近真实面试，训练效果好，记忆点足。</div>
+      <div class="vd con"><div class="vd-h">取舍</div>进度 / rubric 等信息被隐藏，长面试中可回看的内容少。</div>
+      <div class="vd fit"><div class="vd-h">适合</div>"高仿真模拟"主打卖点，或正式模考模式。</div>
+    </div>
+  </section>
+</main>
+
+<script>
+  // scale framed previews to fit the container width
+  function fit() {
+    document.querySelectorAll('.frame').forEach(function(f){
+      var s = f.querySelector('.scaler');
+      var w = f.clientWidth;
+      var k = w / 1280;
+      s.style.transform = 'scale(' + k + ')';
+      f.style.height = (864 * k) + 'px';
+    });
+  }
+  window.addEventListener('load', fit);
+  window.addEventListener('resize', fit);
+  fit();
+</script>
+
+</body>
+</html>

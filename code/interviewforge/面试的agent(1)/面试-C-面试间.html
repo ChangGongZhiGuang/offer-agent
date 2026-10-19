@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>面试主界面 · 方向 C · 面试间</title>
+<link rel="stylesheet" href="styles/forge.css">
+<style>
+  body { background:#080B16; }
+  .app { width:1280px; height:864px; margin:0 auto; position:relative; overflow:hidden;
+    background:radial-gradient(120% 90% at 50% -10%, #1A1F3A 0%, #0C1020 45%, #080B16 100%); color:#fff; display:flex; flex-direction:column; }
+  .app::before { content:""; position:absolute; left:50%; top:-180px; transform:translateX(-50%); width:680px; height:680px; border-radius:50%; background:radial-gradient(circle, rgba(99,102,241,.22), transparent 65%); pointer-events:none; }
+
+  /* top bar */
+  .tbar { height:60px; flex:none; display:flex; align-items:center; gap:16px; padding:0 28px; border-bottom:1px solid rgba(255,255,255,.07); position:relative; z-index:2; }
+  .tbar .brand { font-size:15px; color:#fff; } .tbar .brand .glyph { width:26px; height:26px; border-radius:7px; }
+  .tbar .job { font-size:13px; color:var(--ink-400); } .tbar .job b { color:#E2E8F0; }
+  .prog-dots { display:flex; align-items:center; gap:7px; }
+  .pd { width:9px; height:9px; border-radius:50%; }
+  .pd.done { background:#34D399; }
+  .pd.cur { background:var(--ember-500); box-shadow:0 0 0 4px rgba(249,115,22,.25); }
+  .pd.todo { background:rgba(255,255,255,.14); }
+  .ghost-d { background:rgba(255,255,255,.06)!important; color:#E2E8F0!important; box-shadow:inset 0 0 0 1px rgba(255,255,255,.12)!important; }
+
+  .stage { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:0 40px; position:relative; z-index:2; min-height:0; }
+  .col { width:760px; max-width:100%; display:flex; flex-direction:column; align-items:center; }
+
+  /* interviewer presence */
+  .interviewer { display:flex; flex-direction:column; align-items:center; }
+  .iv-av-wrap { position:relative; width:84px; height:84px; }
+  .iv-ring { position:absolute; inset:-9px; border-radius:50%; border:2px solid rgba(99,102,241,.4); animation:pulse 2.6s ease-out infinite; }
+  .iv-ring.r2 { inset:-9px; animation-delay:1.3s; }
+  @keyframes pulse { 0%{transform:scale(.9);opacity:.8;} 100%{transform:scale(1.35);opacity:0;} }
+  .iv-av { width:84px; height:84px; border-radius:50%; background:linear-gradient(150deg,#6366F1,#4338CA); display:grid; place-items:center; box-shadow:0 16px 40px -10px rgba(79,70,229,.6), inset 0 2px 0 rgba(255,255,255,.2); position:relative; z-index:1; }
+  .iv-av svg { width:38px; height:38px; }
+  .iv-name { font-family:var(--font-display); font-size:17px; font-weight:600; margin-top:18px; }
+  .iv-role { font-size:12.5px; color:var(--ink-400); margin-top:3px; }
+  .iv-state { display:inline-flex; align-items:center; gap:8px; margin-top:14px; font-size:12px; color:#C4B5FD; background:rgba(99,102,241,.14); border:1px solid rgba(99,102,241,.25); padding:6px 14px; border-radius:var(--r-full); }
+  .iv-state .typing { display:inline-flex; gap:3px; }
+  .iv-state .typing i { width:4px; height:4px; border-radius:50%; background:#C4B5FD; display:block; animation:blink 1.2s infinite; }
+  .iv-state .typing i:nth-child(2){animation-delay:.2s;} .iv-state .typing i:nth-child(3){animation-delay:.4s;}
+  @keyframes blink { 0%,100%{opacity:.3;} 50%{opacity:1;} }
+
+  /* question */
+  .qtag { display:flex; align-items:center; gap:8px; margin-top:34px; }
+  .question { font-family:var(--font-display); font-size:26px; line-height:1.4; letter-spacing:-0.015em; text-align:center; margin-top:18px; color:#F8FAFC; text-wrap:balance; }
+  .question b { color:#A5B4FC; }
+  .ctx-pill { display:inline-flex; align-items:center; gap:8px; margin-top:22px; font-size:12.5px; color:var(--ink-400); background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08); padding:8px 15px; border-radius:var(--r-full); }
+  .ctx-pill b { color:#34D399; }
+
+  /* composer (glassy) */
+  .composer { width:100%; padding:0 0 30px; position:relative; z-index:2; }
+  .comp-inner { width:760px; max-width:100%; margin:0 auto; }
+  .glass { background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.12); border-radius:var(--r-xl); padding:16px 18px; backdrop-filter:blur(10px); box-shadow:0 12px 40px -12px rgba(0,0,0,.5); }
+  .glass .ph { font-size:14.5px; color:var(--ink-400); line-height:1.6; }
+  .glass-foot { display:flex; align-items:center; justify-content:space-between; margin-top:14px; }
+  .glass-hint { font-size:12px; color:var(--ink-500); display:flex; gap:14px; }
+  .mic { width:38px; height:38px; border-radius:50%; background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.14); display:grid; place-items:center; }
+  .send { height:40px; padding:0 18px; border-radius:var(--r-md); background:linear-gradient(180deg,var(--ember-500),var(--ember-600)); color:#fff; font-weight:600; font-size:13.5px; box-shadow:0 10px 26px -8px rgba(234,88,12,.6); display:inline-flex; align-items:center; gap:8px; }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <div class="tbar">
+    <div class="brand"><span class="glyph"><svg viewBox="0 0 24 24" fill="none"><path d="M12 2.5l2.2 6.1 6.3.3-4.9 4 1.7 6.1L12 19.4 6.7 23l1.7-6.1-4.9-4 6.3-.3z" fill="#fff"/></svg></span></div>
+    <div class="job">资深后端工程师 · <b>云启科技</b></div>
+    <div class="grow"></div>
+    <div class="prog-dots"><span class="pd done"></span><span class="pd cur"></span><span class="pd todo"></span><span class="pd todo"></span><span class="pd todo"></span><span class="pd todo"></span></div>
+    <span style="font-family:var(--font-mono);font-size:12px;color:var(--ink-400);">02 / 06</span>
+    <div class="vr" style="height:22px;background:rgba(255,255,255,.12);"></div>
+    <button class="btn btn-sm ghost-d">结束</button>
+  </div>
+
+  <div class="stage">
+    <div class="col">
+      <div class="interviewer">
+        <div class="iv-av-wrap">
+          <span class="iv-ring"></span><span class="iv-ring r2"></span>
+          <span class="iv-av"><svg viewBox="0 0 24 24" fill="none"><path d="M12 2.5l2.2 6.1 6.3.3-4.9 4 1.7 6.1L12 19.4 6.7 23l1.7-6.1-4.9-4 6.3-.3z" fill="#fff" opacity=".95"/></svg></span>
+        </div>
+        <div class="iv-name">Forge</div>
+        <div class="iv-role">你的资深后端模拟面试官</div>
+        <div class="iv-state">正在追问<span class="typing"><i></i><i></i><i></i></span></div>
+      </div>
+
+      <div class="qtag">
+        <span class="badge badge-violet">难度 · 中高</span>
+        <span class="badge badge-red"><svg viewBox="0 0 24 24" fill="none"><path d="M12 3l9 16H3z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>验证"精通"</span>
+      </div>
+
+      <div class="question">你简历写「<b>精通</b> Redis」。那在<b>主从复制</b>下，从库为什么可能读到已过期但还没删除的数据？过期删除策略在主从之间是怎么协调的？</div>
+
+      <div class="ctx-pill"><svg viewBox="0 0 24 24" fill="none" width="14" height="14"><path d="M5 13l4 4L19 7" stroke="#34D399" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>上一题 缓存基础答得很扎实 <b>4.5/5</b>，这题我们深一层</div>
+    </div>
+  </div>
+
+  <div class="composer">
+    <div class="comp-inner">
+      <div class="glass">
+        <div class="ph">说出或输入你的回答…</div>
+        <div class="glass-foot">
+          <div class="glass-hint"><span>可先讲思路</span><span>支持语音作答</span></div>
+          <div class="row" style="gap:10px;">
+            <button class="mic"><svg viewBox="0 0 24 24" fill="none" width="17" height="17"><rect x="9" y="3" width="6" height="11" rx="3" stroke="#E2E8F0" stroke-width="1.7"/><path d="M5 11a7 7 0 0014 0M12 18v3" stroke="#E2E8F0" stroke-width="1.7" stroke-linecap="round"/></svg></button>
+            <button class="send">提交回答<svg viewBox="0 0 24 24" fill="none" width="16" height="16"><path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

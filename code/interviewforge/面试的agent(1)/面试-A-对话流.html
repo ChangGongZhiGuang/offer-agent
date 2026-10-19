@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>面试主界面 · 方向 A · 对话流</title>
+<link rel="stylesheet" href="styles/forge.css">
+<style>
+  body { background:var(--bg); }
+  .app { width:1280px; height:864px; margin:0 auto; background:var(--paper); display:flex; flex-direction:column; overflow:hidden; }
+
+  /* interview top bar */
+  .ibar { height:62px; flex:none; display:flex; align-items:center; gap:16px; padding:0 24px; border-bottom:1px solid var(--ink-200); background:var(--paper); }
+  .ibar .brand { font-size:15px; }
+  .ibar .brand .glyph { width:26px; height:26px; border-radius:7px; }
+  .ibar .job { font-size:13.5px; color:var(--ink-500); }
+  .ibar .job b { color:var(--ink-900); font-weight:600; }
+  .qcount { font-family:var(--font-mono); font-size:13px; font-weight:600; color:var(--ink-700); display:flex; align-items:center; gap:8px; }
+  .timer { font-family:var(--font-mono); font-size:13px; color:var(--ink-500); display:flex; align-items:center; gap:6px; }
+
+  .body { flex:1; display:flex; min-height:0; }
+
+  /* left rail */
+  .rail { width:268px; flex:none; border-right:1px solid var(--ink-200); background:var(--ink-50); display:flex; flex-direction:column; }
+  .rail-sec { padding:18px 18px; }
+  .rail-h { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:var(--ink-400); margin-bottom:13px; }
+  .qprog { display:flex; flex-direction:column; gap:3px; }
+  .qprog-item { display:flex; align-items:center; gap:11px; padding:9px 10px; border-radius:var(--r-sm); font-size:13px; }
+  .qprog-item.cur { background:#fff; box-shadow:var(--sh-xs); border:1px solid var(--brand-100); }
+  .qp-dot { width:22px; height:22px; border-radius:50%; flex:none; display:grid; place-items:center; font-size:11px; font-weight:700; font-family:var(--font-mono); }
+  .qp-dot.done { background:var(--green-100); color:var(--green-700); }
+  .qp-dot.cur { background:var(--brand-600); color:#fff; }
+  .qp-dot.todo { background:var(--ink-100); color:var(--ink-400); }
+  .qp-name { flex:1; color:var(--ink-700); }
+  .qprog-item.cur .qp-name { font-weight:600; color:var(--ink-900); }
+  .qp-score { font-family:var(--font-mono); font-size:11px; font-weight:700; color:var(--green-600); }
+
+  .mini-profile { margin-top:auto; padding:18px; border-top:1px solid var(--ink-200); }
+  .mp-row { display:flex; align-items:center; gap:11px; }
+  .mp-name { font-size:13.5px; font-weight:700; color:var(--ink-900); }
+  .mp-meta { font-size:11.5px; color:var(--ink-500); }
+  .mp-tags { display:flex; flex-wrap:wrap; gap:5px; margin-top:12px; }
+
+  /* center thread */
+  .thread-wrap { flex:1; display:flex; flex-direction:column; min-width:0; }
+  .dimbar { height:48px; flex:none; display:flex; align-items:center; gap:10px; padding:0 28px; border-bottom:1px solid var(--ink-100); background:rgba(255,255,255,.7); }
+  .dimbar .dlabel { font-size:13px; color:var(--ink-500); }
+  .dimbar .dval { font-size:14px; font-weight:700; color:var(--ink-900); }
+
+  .thread { flex:1; overflow:hidden; padding:26px 28px; display:flex; flex-direction:column; gap:22px; }
+  .msg { display:flex; gap:14px; max-width:740px; }
+  .msg.user { flex-direction:row-reverse; margin-left:auto; }
+  .bub { padding:15px 18px; border-radius:16px; font-size:14.5px; line-height:1.6; }
+  .msg.ai .bub { background:var(--ink-50); border:1px solid var(--ink-200); border-top-left-radius:5px; color:var(--ink-800); }
+  .msg.user .bub { background:linear-gradient(180deg,var(--brand-500),var(--brand-600)); color:#fff; border-top-right-radius:5px; }
+  .msg.ai.cur .bub { background:#fff; border:1.5px solid var(--brand-300); box-shadow:0 8px 24px -10px rgba(79,70,229,.3); }
+  .bub .qmeta { display:flex; align-items:center; gap:7px; margin-bottom:9px; }
+  .bub .rubric { display:flex; flex-wrap:wrap; gap:6px; margin-top:12px; padding-top:12px; border-top:1px dashed var(--ink-200); }
+  .rubric .rl { font-size:10.5px; font-weight:700; color:var(--ink-400); text-transform:uppercase; letter-spacing:.06em; width:100%; margin-bottom:2px; }
+
+  /* composer */
+  .composer { flex:none; padding:16px 28px 20px; border-top:1px solid var(--ink-200); background:var(--paper); }
+  .comp-box { border:1.5px solid var(--ink-200); border-radius:var(--r-lg); padding:14px 16px; transition:border-color .18s; }
+  .comp-box:focus-within { border-color:var(--brand-300); box-shadow:var(--ring); }
+  .comp-box .ph { font-size:14.5px; color:var(--ink-400); line-height:1.6; }
+  .comp-foot { display:flex; align-items:center; justify-content:space-between; margin-top:12px; }
+  .comp-hint { font-size:12px; color:var(--ink-400); display:flex; gap:14px; }
+  .comp-hint kbd { font-family:var(--font-mono); background:var(--ink-100); border:1px solid var(--ink-200); border-radius:4px; padding:1px 6px; font-size:11px; }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <!-- top bar -->
+  <div class="ibar">
+    <div class="brand"><span class="glyph"><svg viewBox="0 0 24 24" fill="none"><path d="M12 2.5l2.2 6.1 6.3.3-4.9 4 1.7 6.1L12 19.4 6.7 23l1.7-6.1-4.9-4 6.3-.3z" fill="#fff"/></svg></span></div>
+    <div class="vr" style="height:26px;"></div>
+    <div class="job">模拟面试 · <b>资深后端工程师</b> · 云启科技</div>
+    <div class="grow"></div>
+    <div class="qcount"><span class="dot" style="background:var(--ember-500);"></span>第 2 / 6 题</div>
+    <div class="vr" style="height:22px;"></div>
+    <div class="timer"><svg viewBox="0 0 24 24" fill="none" width="15" height="15"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8"/><path d="M12 7v5l3 2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>14:32</div>
+    <button class="btn btn-ghost btn-sm">结束面试</button>
+  </div>
+
+  <div class="body">
+    <!-- left rail -->
+    <aside class="rail">
+      <div class="rail-sec">
+        <div class="rail-h">面试进度</div>
+        <div class="qprog">
+          <div class="qprog-item"><span class="qp-dot done"><svg viewBox="0 0 24 24" fill="none" width="11" height="11"><path d="M5 13l4 4L19 7" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="qp-name">缓存 / Redis 基础</span><span class="qp-score">4.5</span></div>
+          <div class="qprog-item cur"><span class="qp-dot cur">2</span><span class="qp-name">Redis 深挖 · 验证</span><span class="badge badge-red" style="height:18px;padding:0 7px;font-size:10px;">深挖中</span></div>
+          <div class="qprog-item"><span class="qp-dot todo">3</span><span class="qp-name">高并发 · 秒杀</span></div>
+          <div class="qprog-item"><span class="qp-dot todo">4</span><span class="qp-name">分布式一致性</span></div>
+          <div class="qprog-item"><span class="qp-dot todo">5</span><span class="qp-name">MySQL 索引</span></div>
+          <div class="qprog-item"><span class="qp-dot todo">6</span><span class="qp-name">消息队列 · 机动</span></div>
+        </div>
+      </div>
+      <div class="mini-profile">
+        <div class="rail-h">候选人画像 · semantic</div>
+        <div class="mp-row"><span class="avatar avatar-user" style="width:34px;height:34px;font-size:13px;">林</span><div><div class="mp-name">林书航</div><div class="mp-meta">3.2 年 · 中级后端</div></div></div>
+        <div class="mp-tags">
+          <span class="badge badge-green">缓存 强</span>
+          <span class="badge badge-amber">分布式 待验</span>
+          <span class="badge badge-red">"精通" 验证中</span>
+        </div>
+      </div>
+    </aside>
+
+    <!-- center thread -->
+    <div class="thread-wrap">
+      <div class="dimbar">
+        <span class="dlabel">当前考察维度</span>
+        <span class="dval">Redis 深挖 · 真实性验证</span>
+        <span class="badge badge-violet">难度 · 中高</span>
+        <div class="grow"></div>
+        <span class="badge badge-ink mono">Examiner 出题 · Grader 评分</span>
+      </div>
+
+      <div class="thread">
+        <!-- AI Q1 -->
+        <div class="msg ai">
+          <span class="avatar avatar-ai">AI</span>
+          <div class="bub">
+            <div class="qmeta"><span class="badge badge-brand">Q1 · 热身</span></div>
+            看到你简历里秒杀系统用 Redis 扛峰值。先热个身——<b>缓存击穿、缓存雪崩、缓存穿透</b>这三者有什么区别？分别怎么防护？
+          </div>
+        </div>
+        <!-- user A1 -->
+        <div class="msg user">
+          <span class="avatar avatar-user">林</span>
+          <div class="bub">击穿是某个热点 key 失效瞬间大量请求打到 DB，用互斥锁或逻辑过期解决；雪崩是大量 key 同时失效，给过期时间加随机抖动；穿透是查不存在的数据，用布隆过滤器或缓存空值。</div>
+        </div>
+        <!-- AI follow-up (current) -->
+        <div class="msg ai cur">
+          <span class="avatar avatar-ai">AI</span>
+          <div class="bub">
+            <div class="qmeta"><span class="badge badge-green"><svg viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>三点都答到了 · 4.5/5</span><span class="badge badge-red">追问 · 验证"精通"</span></div>
+            答得不错。你简历写「<b>精通</b> Redis」，那我深入一点：在<b>主从复制</b>架构下，从库为什么可能读到<b>已过期但未删除</b>的数据？Redis 的过期删除策略（惰性 + 定期）在主从之间是怎么协调的？
+            <div class="rubric">
+              <span class="rl">评分要点 · rubric</span>
+              <span class="chip mono">惰性删除机制</span><span class="chip mono">定期删除采样</span><span class="chip mono">主从删除指令传播</span><span class="chip mono">DEL vs 逻辑过期</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- composer -->
+      <div class="composer">
+        <div class="comp-box">
+          <div class="ph">输入你的回答…（可以先讲思路，再补细节）</div>
+          <div class="comp-foot">
+            <div class="comp-hint"><span><kbd>Shift</kbd> + <kbd>Enter</kbd> 换行</span><span>支持 Markdown / 代码块</span></div>
+            <button class="btn btn-primary btn-sm" style="height:38px;padding:0 18px;">提交回答 →</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

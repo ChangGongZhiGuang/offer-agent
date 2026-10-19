@@ -1,0 +1,14 @@
+__pycache__/
+*.pyc
+.env
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+chroma/
+# 运行期本地缓存: 会话 transcript / Chroma 持久向量库 (INTERVIEWFORGE_VECTOR_STORE=chroma)
+.interviewforge_sessions/
+.interviewforge_chroma/
+*.jsonl
+.idea/
+.vscode/

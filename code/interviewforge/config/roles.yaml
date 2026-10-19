@@ -1,0 +1,16 @@
+# 全局 procedural 规则与有界性参数 (常驻, 后续标记 pinned)
+bounds:
+  token_budget: 24000          # 上下文上限 (约模型窗口的 70%)
+  max_turns: 30                # 整场对话硬上限
+  max_replans: 3               # 单轮重规划上限, 防 PLAN<->VERIFY 死循环
+  max_tool_calls_per_turn: 5   # 防单轮工具风暴
+  single_output_cap: 2000      # 单个工具输出 token 上限 (L1 触发线)
+  snip_after_turns: 20         # 历史超过此轮数触发 L2
+
+global_rules:
+  - id: no_duplicate_question
+    desc: 同一场面试不得重复出同一道题
+  - id: score_in_range
+    desc: 评分必须落在 1-5 的合法区间
+  - id: difficulty_matches_role
+    desc: 题目难度须匹配岗位与候选人画像

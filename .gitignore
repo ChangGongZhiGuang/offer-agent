@@ -1,0 +1,33 @@
+# ---- 不上传的文档目录 ----
+docs/
+
+# ---- 工作区本地/隐私数据 ----
+.workbuddy/
+.vscode/
+.idea/
+.pytest_cache/
+
+# ---- Python ----
+__pycache__/
+*.pyc
+*.egg-info/
+.venv/
+venv/
+
+# ---- 环境密钥（绝不上传）----
+.env
+
+# ---- 运行期本地缓存 ----
+.interviewforge_sessions/
+.interviewforge_chroma/
+*.jsonl
+
+# ---- 前端 ----
+node_modules/
+dist/
+.vite/
+*.log
+
+# ---- 操作系统 ----
+.DS_Store
+Thumbs.db

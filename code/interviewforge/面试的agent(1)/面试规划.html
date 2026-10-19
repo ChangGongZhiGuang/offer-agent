@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>InterviewForge · 面试规划</title>
+<link rel="stylesheet" href="styles/forge.css">
+<style>
+  .page { padding:30px 0 60px; }
+  .crumb { display:flex; align-items:center; gap:8px; font-size:13px; color:var(--ink-400); margin-bottom:18px; }
+  .crumb a:hover { color:var(--ink-700); }
+  .crumb .c-now { color:var(--ink-700); font-weight:600; }
+  .head-row { display:flex; align-items:flex-end; justify-content:space-between; gap:20px; margin-bottom:22px; }
+  .ptitle { font-size:30px; letter-spacing:-0.025em; }
+  .psub { color:var(--ink-500); font-size:15px; margin-top:7px; max-width:640px; }
+  .stepwrap { background:var(--paper); border:1px solid var(--ink-200); border-radius:var(--r-lg); padding:18px 24px; box-shadow:var(--sh-xs); margin-bottom:22px; }
+
+  /* skill loaded banner */
+  .skillbar { display:flex; align-items:center; gap:16px; padding:16px 20px; border-radius:var(--r-lg); background:linear-gradient(100deg,var(--brand-50),#fff 60%); border:1px solid var(--brand-100); margin-bottom:24px; }
+  .skillbar .sk-ic { width:42px; height:42px; border-radius:12px; flex:none; display:grid; place-items:center; background:#fff; box-shadow:var(--sh-sm); color:var(--brand-600); }
+  .skillbar .sk-name { font-family:var(--font-mono); font-size:14px; font-weight:600; color:var(--brand-800); }
+  .skillbar .sk-desc { font-size:12.5px; color:var(--ink-500); margin-top:2px; }
+
+  .layout { display:grid; grid-template-columns:1fr 320px; gap:22px; align-items:start; }
+
+  /* plan timeline */
+  .plan-head { display:flex; align-items:center; gap:9px; margin-bottom:16px; }
+  .plan-head h2 { font-size:19px; }
+  .qcard { display:flex; gap:16px; background:var(--paper); border:1px solid var(--ink-200); border-radius:var(--r-lg); padding:18px; box-shadow:var(--sh-xs); margin-bottom:14px; position:relative; transition:box-shadow .18s, border-color .18s; }
+  .qcard:hover { box-shadow:var(--sh-md); border-color:var(--ink-300); }
+  .qcard .qn { width:40px; height:40px; border-radius:12px; flex:none; display:grid; place-items:center; font-family:var(--font-display); font-weight:700; font-size:16px; background:var(--ink-900); color:#fff; }
+  .qcard.flag { border-color:#FECACA; box-shadow:0 0 0 1px #FECACA; }
+  .qcard.flag .qn { background:var(--red-600); }
+  .qcard.probe .qn { background:var(--amber-500); }
+  .q-body { flex:1; }
+  .q-top { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  .q-dim { font-family:var(--font-display); font-size:16px; font-weight:600; color:var(--ink-950); }
+  .q-src { font-size:12.5px; color:var(--ink-500); margin-top:8px; display:flex; align-items:center; gap:7px; }
+  .q-src b { color:var(--ink-700); font-weight:600; }
+  .q-followup { margin-top:12px; padding:11px 13px; background:var(--ink-50); border-radius:var(--r-sm); border:1px dashed var(--ink-200); }
+  .q-followup .fl-h { font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.07em; color:var(--ink-400); margin-bottom:7px; }
+  .fl-row { display:flex; gap:8px; font-size:12.5px; color:var(--ink-600); padding:3px 0; }
+  .fl-row .fl-k { font-weight:700; flex:none; width:54px; }
+  .diff { font-size:11.5px; font-weight:700; padding:3px 9px; border-radius:var(--r-full); }
+  .diff-mid { background:var(--sky-100); color:var(--sky-600); }
+  .diff-midhi { background:var(--violet-100); color:var(--violet-600); }
+  .diff-hi { background:var(--ember-100); color:var(--ember-700); }
+
+  /* sidebar cards */
+  .side { display:flex; flex-direction:column; gap:18px; position:sticky; top:84px; }
+  .scard { background:var(--paper); border:1px solid var(--ink-200); border-radius:var(--r-lg); padding:18px; box-shadow:var(--sh-xs); }
+  .scard h4 { font-size:13.5px; font-family:var(--font-body); font-weight:700; color:var(--ink-800); margin-bottom:14px; display:flex; align-items:center; gap:8px; }
+  .scard h4 .tag-mono { margin-left:auto; }
+
+  /* difficulty gradient */
+  .grad { display:flex; align-items:flex-end; gap:7px; height:78px; padding-top:6px; }
+  .gbar { flex:1; border-radius:6px 6px 3px 3px; position:relative; display:flex; align-items:flex-end; justify-content:center; }
+  .gbar span { position:absolute; bottom:-19px; font-family:var(--font-mono); font-size:10px; color:var(--ink-400); }
+
+  /* coverage */
+  .cov { display:flex; flex-direction:column; gap:11px; }
+  .cov-row { font-size:12.5px; }
+  .cov-row .cv-top { display:flex; justify-content:space-between; margin-bottom:5px; }
+  .cov-row .cv-name { font-weight:600; color:var(--ink-700); }
+  .cov-row .cv-track { height:6px; background:var(--ink-100); border-radius:4px; overflow:hidden; }
+  .cov-row .cv-fill { height:100%; border-radius:4px; }
+
+  /* constraints */
+  .cons { display:flex; flex-direction:column; gap:0; }
+  .cons-row { display:flex; align-items:center; justify-content:space-between; padding:9px 0; border-bottom:1px solid var(--ink-100); font-size:12.5px; }
+  .cons-row:last-child { border:0; }
+  .cons-row .ck { font-family:var(--font-mono); color:var(--ink-500); }
+  .cons-row .cval { font-family:var(--font-mono); font-weight:600; color:var(--ink-900); }
+
+  .cta-bar { display:flex; align-items:center; justify-content:space-between; margin-top:26px; padding:20px 24px; background:var(--paper); border:1px solid var(--ink-200); border-radius:var(--r-lg); box-shadow:var(--sh-sm); }
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="shell">
+    <div class="brand">
+      <span class="glyph"><svg viewBox="0 0 24 24" fill="none"><path d="M12 2.5l2.2 6.1 6.3.3-4.9 4 1.7 6.1L12 19.4 6.7 23l1.7-6.1-4.9-4 6.3-.3z" fill="#fff" opacity=".95"/></svg></span>
+      InterviewForge
+    </div>
+    <div class="nav-links">
+      <a href="岗位广场.html">岗位广场</a>
+      <a href="投递准备.html">我的投递</a>
+      <a href="面试主界面.html">模拟面试</a>
+      <a href="评分报告.html">面试报告</a>
+    </div>
+    <div class="grow"></div>
+    <span class="phase-pill" style="background:var(--brand-50);color:var(--brand-700);"><span class="dot" style="background:var(--brand-500);"></span>Phase · PLAN</span>
+  </div>
+</nav>
+
+<main class="shell page">
+  <div class="crumb">
+    <a href="岗位广场.html">岗位广场</a><span>/</span>
+    <a href="投递准备.html">资深后端工程师</a><span>/</span>
+    <span class="c-now">面试规划</span>
+  </div>
+
+  <div class="head-row">
+    <div>
+      <h1 class="ptitle">规划本场面试结构</h1>
+      <p class="psub">PLAN 相位：识别岗位类型 → 懒加载 backend-interview Skill，结合 JD + 画像产出本场计划——考几道、每道考什么维度、难度怎么走。</p>
+    </div>
+    <span class="badge badge-violet" style="height:30px;padding:0 14px;"><svg viewBox="0 0 24 24" fill="none" width="13" height="13"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8"/><path d="M12 7v5l3 2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>计划已产出 · 6 题</span>
+  </div>
+
+  <div class="stepwrap">
+    <div class="stepper">
+      <div class="step"><span class="step-num done"><svg viewBox="0 0 24 24" fill="none" width="13" height="13"><path d="M5 13l4 4L19 7" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="step-label done">投递准备</span></div>
+      <div class="step-line done"></div>
+      <div class="step"><span class="step-num now">1</span><span class="step-label now">面试规划</span></div>
+      <div class="step-line"></div>
+      <div class="step"><span class="step-num todo">2</span><span class="step-label todo">多轮面试</span></div>
+      <div class="step-line"></div>
+      <div class="step"><span class="step-num todo">3</span><span class="step-label todo">评分报告</span></div>
+    </div>
+  </div>
+
+  <!-- skill loaded -->
+  <div class="skillbar">
+    <span class="sk-ic"><svg viewBox="0 0 24 24" fill="none"><path d="M4 5a2 2 0 012-2h9l5 5v11a2 2 0 01-2 2H6a2 2 0 01-2-2z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M9 12l2 2 4-4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+    <div class="grow">
+      <div class="row" style="gap:10px;"><span class="sk-name">skills/backend-interview/SKILL.md</span><span class="badge badge-green">已懒加载</span><span class="badge badge-ink mono">pinned · 段位[1]</span></div>
+      <div class="sk-desc">岗位 JD 涉及服务端、数据库、并发、分布式 → registry 据 description 匹配并注入。本场会话内稳定，享受缓存前缀命中、不参与压缩。</div>
+    </div>
+  </div>
+
+  <div class="layout">
+    <!-- plan -->
+    <section>
+      <div class="plan-head">
+        <h2>本场出题计划</h2>
+        <span class="badge badge-ink mono">Plan{ intent, tool_calls[], expected_outcome }</span>
+      </div>
+
+      <div class="qcard">
+        <div class="qn">1</div>
+        <div class="q-body">
+          <div class="q-top"><span class="q-dim">缓存 / Redis 基础</span><span class="diff diff-mid">难度 · 中</span><span class="badge badge-green">热身 · 建基线</span></div>
+          <div class="q-src">来源 <b>简历重点项目「秒杀系统缓存层」</b> ∩ JD R1（必须·精通）</div>
+          <div class="q-followup">
+            <div class="fl-h">追问树（来自 Skill）</div>
+            <div class="fl-row"><span class="fl-k">答得好</span>→ 加深一层：缓存击穿 / 雪崩 / 穿透的差异与防护</div>
+            <div class="fl-row"><span class="fl-k">答得卡</span>→ 给提示：先从"key 失效的瞬间发生了什么"想</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="qcard flag">
+        <div class="qn">2</div>
+        <div class="q-body">
+          <div class="q-top"><span class="q-dim">Redis 深挖 · 真实性验证</span><span class="diff diff-midhi">难度 · 中高</span><span class="badge badge-red"><svg viewBox="0 0 24 24" fill="none"><path d="M12 3l9 16H3z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>Overclaim 验证</span></div>
+          <div class="q-src">来源 <b>简历自述"精通 Redis"</b> → VERIFY 门重点关注是否属实</div>
+          <div class="q-followup">
+            <div class="fl-h">追问树（来自 Skill）</div>
+            <div class="fl-row"><span class="fl-k">答得好</span>→ 持久化 RDB/AOF 取舍、主从复制延迟来源</div>
+            <div class="fl-row"><span class="fl-k">含糊</span>→ 要求举具体例子，验证"精通"边界（红旗信号）</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="qcard">
+        <div class="qn">3</div>
+        <div class="q-body">
+          <div class="q-top"><span class="q-dim">高并发 · 秒杀场景</span><span class="diff diff-hi">难度 · 高</span><span class="badge badge-violet">梯度爬升</span></div>
+          <div class="q-src">来源 <b>JD R2（必须·精通）</b> ∩ 简历秒杀项目</div>
+          <div class="q-followup">
+            <div class="fl-h">追问树</div>
+            <div class="fl-row"><span class="fl-k">答得好</span>→ "那高并发下这个方案的瓶颈在哪？"</div>
+            <div class="fl-row"><span class="fl-k">答得卡</span>→ 换角度："先想想读写比例？"</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="qcard probe">
+        <div class="qn">4</div>
+        <div class="q-body">
+          <div class="q-top"><span class="q-dim">分布式一致性 · 探底</span><span class="diff diff-mid">难度 · 中</span><span class="badge badge-amber">缺口探底</span></div>
+          <div class="q-src">来源 <b>能力缺口</b>：JD R3 重要项，简历未直接覆盖 → 出基础题探深浅</div>
+          <div class="q-followup">
+            <div class="fl-h">追问树</div>
+            <div class="fl-row"><span class="fl-k">答得好</span>→ 加深至 CAP 取舍与实际选型</div>
+            <div class="fl-row"><span class="fl-k">答得卡</span>→ 不强追，记入弱项，换下一题</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="qcard">
+        <div class="qn">5</div>
+        <div class="q-body">
+          <div class="q-top"><span class="q-dim">MySQL 索引与优化</span><span class="diff diff-mid">难度 · 中</span><span class="badge badge-green">交叉考点</span></div>
+          <div class="q-src">来源 <b>JD R4</b> ∩ 简历「慢查询治理」项目</div>
+        </div>
+      </div>
+
+      <div class="qcard">
+        <div class="qn">6</div>
+        <div class="q-body">
+          <div class="q-top"><span class="q-dim">消息队列 / 系统设计</span><span class="diff diff-hi">难度 · 高</span><span class="badge badge-ink">机动 · 视时间</span></div>
+          <div class="q-src">来源 <b>JD R5 加分项</b> ∩ 订单拆分项目 · 若前 5 题用时充裕则触发</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- sidebar -->
+    <aside class="side">
+      <div class="scard">
+        <h4>难度梯度 <span class="tag-mono">expected</span></h4>
+        <div class="grad">
+          <div class="gbar" style="height:46%;background:linear-gradient(180deg,#7DD3FC,#38BDF8);"><span>Q1</span></div>
+          <div class="gbar" style="height:66%;background:linear-gradient(180deg,#C4B5FD,#A78BFA);"><span>Q2</span></div>
+          <div class="gbar" style="height:92%;background:linear-gradient(180deg,#FDBA74,#FB923C);"><span>Q3</span></div>
+          <div class="gbar" style="height:46%;background:linear-gradient(180deg,#7DD3FC,#38BDF8);"><span>Q4</span></div>
+          <div class="gbar" style="height:46%;background:linear-gradient(180deg,#7DD3FC,#38BDF8);"><span>Q5</span></div>
+          <div class="gbar" style="height:88%;background:linear-gradient(180deg,#FDBA74,#FB923C);"><span>Q6</span></div>
+        </div>
+        <p style="font-size:12px;color:var(--ink-500);margin-top:26px;line-height:1.5;">先热身建立基线，逐步爬升至高难度，缺口维度回落到基础题探底——答得好再加难度。</p>
+      </div>
+
+      <div class="scard">
+        <h4>维度覆盖</h4>
+        <div class="cov">
+          <div class="cov-row"><div class="cv-top"><span class="cv-name">缓存 / Redis</span><span class="mono dim">2 题</span></div><div class="cv-track"><div class="cv-fill" style="width:100%;background:var(--brand-500);"></div></div></div>
+          <div class="cov-row"><div class="cv-top"><span class="cv-name">高并发</span><span class="mono dim">1 题</span></div><div class="cv-track"><div class="cv-fill" style="width:60%;background:var(--ember-500);"></div></div></div>
+          <div class="cov-row"><div class="cv-top"><span class="cv-name">分布式</span><span class="mono dim">1 题 · 探底</span></div><div class="cv-track"><div class="cv-fill" style="width:45%;background:var(--amber-500);"></div></div></div>
+          <div class="cov-row"><div class="cv-top"><span class="cv-name">MySQL</span><span class="mono dim">1 题</span></div><div class="cv-track"><div class="cv-fill" style="width:55%;background:var(--sky-600);"></div></div></div>
+          <div class="cov-row"><div class="cv-top"><span class="cv-name">消息队列</span><span class="mono dim">机动</span></div><div class="cv-track"><div class="cv-fill" style="width:30%;background:var(--ink-300);"></div></div></div>
+        </div>
+      </div>
+
+      <div class="scard">
+        <h4>有界性约束 <span class="tag-mono">procedural</span></h4>
+        <div class="cons">
+          <div class="cons-row"><span class="ck">max_turns</span><span class="cval">24</span></div>
+          <div class="cons-row"><span class="ck">计划题数</span><span class="cval">5 + 1 机动</span></div>
+          <div class="cons-row"><span class="ck">max_replans</span><span class="cval">3 / 轮</span></div>
+          <div class="cons-row"><span class="ck">不重复出题</span><span class="cval" style="color:var(--green-600);">VERIFY 门</span></div>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <div class="cta-bar">
+    <div>
+      <div style="font-size:15px;font-weight:700;color:var(--ink-900);">计划通过 VERIFY 门校验 · 引用工具合法、未超剩余题数</div>
+      <div style="font-size:13px;color:var(--ink-500);margin-top:3px;">进入 EXECUTE：委派 Examiner 子 agent 出第一道题</div>
+    </div>
+    <a href="面试主界面.html" class="btn btn-ember btn-lg">
+      开始模拟面试
+      <svg viewBox="0 0 24 24" fill="none"><path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </a>
+  </div>
+</main>
+
+</body>
+</html>

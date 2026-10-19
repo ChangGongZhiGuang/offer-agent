@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>面试主界面 · 方向 B · Harness 可视化</title>
+<link rel="stylesheet" href="styles/forge.css">
+<style>
+  body { background:var(--bg); }
+  .app { width:1280px; height:864px; margin:0 auto; background:var(--bg); display:flex; flex-direction:column; overflow:hidden; }
+  .ibar { height:62px; flex:none; display:flex; align-items:center; gap:16px; padding:0 24px; border-bottom:1px solid var(--ink-200); background:var(--paper); }
+  .ibar .brand { font-size:15px; } .ibar .brand .glyph { width:26px; height:26px; border-radius:7px; }
+  .ibar .job { font-size:13.5px; color:var(--ink-500); } .ibar .job b { color:var(--ink-900); font-weight:600; }
+  .pevbar { display:flex; align-items:center; gap:2px; background:var(--ink-100); border-radius:var(--r-full); padding:3px; }
+  .pev { font-family:var(--font-mono); font-size:11px; font-weight:600; padding:4px 11px; border-radius:var(--r-full); color:var(--ink-400); }
+  .pev.on { background:var(--ink-900); color:#fff; }
+  .pev.passed { color:var(--green-600); }
+
+  .body { flex:1; display:grid; grid-template-columns:64px 1fr 380px; min-height:0; }
+
+  /* left timeline rail */
+  .tl { border-right:1px solid var(--ink-200); background:var(--paper); display:flex; flex-direction:column; align-items:center; padding:20px 0; gap:4px; }
+  .tl-node { width:34px; height:34px; border-radius:10px; display:grid; place-items:center; font-family:var(--font-mono); font-size:13px; font-weight:700; position:relative; }
+  .tl-node.done { background:var(--green-100); color:var(--green-700); }
+  .tl-node.cur { background:var(--brand-600); color:#fff; box-shadow:var(--ring); }
+  .tl-node.todo { background:var(--ink-50); color:var(--ink-300); border:1px solid var(--ink-200); }
+  .tl-line { width:2px; height:14px; background:var(--ink-200); }
+
+  /* center: focused question */
+  .focus { padding:30px 40px; overflow:hidden; display:flex; flex-direction:column; }
+  .focus-meta { display:flex; align-items:center; gap:10px; }
+  .focus-dim { font-size:13px; color:var(--ink-500); }
+  .qbig { font-family:var(--font-display); font-size:27px; line-height:1.32; letter-spacing:-0.02em; color:var(--ink-950); margin-top:20px; }
+  .qbig b { color:var(--brand-700); }
+  .prev-ctx { margin-top:22px; padding:14px 16px; background:var(--paper); border:1px solid var(--ink-200); border-left:3px solid var(--green-500,#34D399); border-radius:var(--r-md); }
+  .prev-ctx .pc-h { font-size:11px; font-weight:700; color:var(--green-700); text-transform:uppercase; letter-spacing:.06em; margin-bottom:6px; display:flex; align-items:center; gap:7px; }
+  .prev-ctx .pc-t { font-size:13px; color:var(--ink-600); line-height:1.55; }
+  .rubric-row { display:flex; flex-wrap:wrap; gap:7px; margin-top:20px; align-items:center; }
+  .rubric-row .rr-l { font-size:11px; font-weight:700; color:var(--ink-400); text-transform:uppercase; letter-spacing:.06em; }
+
+  .ans { margin-top:auto; }
+  .ans-box { border:1.5px solid var(--ink-200); border-radius:var(--r-lg); padding:16px 18px; background:var(--paper); }
+  .ans-box .ph { font-size:14.5px; color:var(--ink-400); line-height:1.6; }
+  .ans-foot { display:flex; align-items:center; justify-content:space-between; margin-top:14px; }
+
+  /* right: harness runtime */
+  .runtime { border-left:1px solid var(--ink-200); background:linear-gradient(180deg,#0F172A,#0B1020); color:#fff; display:flex; flex-direction:column; overflow:hidden; }
+  .rt-head { padding:16px 20px; border-bottom:1px solid rgba(255,255,255,.08); display:flex; align-items:center; gap:9px; }
+  .rt-head .rt-t { font-family:var(--font-mono); font-size:12.5px; font-weight:600; letter-spacing:.02em; }
+  .rt-live { margin-left:auto; display:flex; align-items:center; gap:6px; font-family:var(--font-mono); font-size:10.5px; color:#34D399; }
+  .rt-live .lv { width:7px; height:7px; border-radius:50%; background:#34D399; box-shadow:0 0 0 3px rgba(52,211,153,.25); }
+  .rt-body { flex:1; overflow:hidden; padding:18px 18px; display:flex; flex-direction:column; gap:16px; }
+  .rt-sec-h { font-family:var(--font-mono); font-size:10.5px; font-weight:600; text-transform:uppercase; letter-spacing:.1em; color:var(--ink-400); }
+
+  .subagent { background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08); border-radius:var(--r-md); padding:12px 13px; margin-top:9px; }
+  .sa-top { display:flex; align-items:center; gap:9px; }
+  .sa-ic { width:26px; height:26px; border-radius:8px; display:grid; place-items:center; flex:none; }
+  .sa-name { font-family:var(--font-mono); font-size:12px; font-weight:600; }
+  .sa-status { margin-left:auto; font-family:var(--font-mono); font-size:10px; padding:2px 8px; border-radius:var(--r-full); }
+  .sa-line { font-size:12px; color:var(--ink-300); margin-top:9px; line-height:1.5; }
+  .sa-tools { display:flex; gap:6px; margin-top:9px; flex-wrap:wrap; }
+  .sa-tool { font-family:var(--font-mono); font-size:10px; color:#A5B4FC; background:rgba(99,102,241,.16); padding:2px 7px; border-radius:5px; }
+
+  .mem-evt { display:flex; gap:10px; padding:8px 0; border-bottom:1px solid rgba(255,255,255,.06); font-size:12px; }
+  .mem-evt:last-child { border:0; }
+  .mem-evt .me-tag { font-family:var(--font-mono); font-size:9.5px; font-weight:700; padding:2px 6px; border-radius:4px; flex:none; height:fit-content; }
+  .mem-evt .me-t { color:var(--ink-300); line-height:1.45; }
+  .mem-evt .me-t b { color:#fff; }
+
+  .ctxbar { margin-top:4px; }
+  .ctxbar .cb-track { height:8px; border-radius:5px; background:rgba(255,255,255,.08); overflow:hidden; display:flex; }
+  .ctxbar .cb-row { display:flex; justify-content:space-between; font-family:var(--font-mono); font-size:10.5px; color:var(--ink-400); margin-top:8px; }
+  .ctxbar .cb-row b { color:#fff; }
+  .pin-note { display:flex; align-items:center; gap:7px; font-size:11px; color:var(--ink-400); margin-top:9px; }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <div class="ibar">
+    <div class="brand"><span class="glyph"><svg viewBox="0 0 24 24" fill="none"><path d="M12 2.5l2.2 6.1 6.3.3-4.9 4 1.7 6.1L12 19.4 6.7 23l1.7-6.1-4.9-4 6.3-.3z" fill="#fff"/></svg></span></div>
+    <div class="vr" style="height:26px;"></div>
+    <div class="job">模拟面试 · <b>资深后端工程师</b> · 第 2 / 6 题</div>
+    <div class="grow"></div>
+    <div class="pevbar">
+      <span class="pev passed">PLAN</span>
+      <span class="pev on">EXECUTE</span>
+      <span class="pev">VERIFY</span>
+      <span class="pev">RESPOND</span>
+    </div>
+    <button class="btn btn-ghost btn-sm">结束面试</button>
+  </div>
+
+  <div class="body">
+    <!-- timeline rail -->
+    <div class="tl">
+      <div class="tl-node done">1</div><div class="tl-line"></div>
+      <div class="tl-node cur">2</div><div class="tl-line"></div>
+      <div class="tl-node todo">3</div><div class="tl-line"></div>
+      <div class="tl-node todo">4</div><div class="tl-line"></div>
+      <div class="tl-node todo">5</div><div class="tl-line"></div>
+      <div class="tl-node todo">6</div>
+    </div>
+
+    <!-- focused question -->
+    <div class="focus">
+      <div class="focus-meta">
+        <span class="badge badge-violet">难度 · 中高</span>
+        <span class="badge badge-red"><svg viewBox="0 0 24 24" fill="none"><path d="M12 3l9 16H3z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>Overclaim 验证</span>
+        <span class="focus-dim">维度：Redis 深挖 · 真实性验证</span>
+      </div>
+      <div class="qbig">你简历写「<b>精通</b> Redis」。在<b>主从复制</b>架构下，从库为什么可能读到<b>已过期但未删除</b>的数据？过期删除策略（惰性 + 定期）在主从之间是怎么协调的？</div>
+
+      <div class="prev-ctx">
+        <div class="pc-h"><svg viewBox="0 0 24 24" fill="none" width="13" height="13"><path d="M5 13l4 4L19 7" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>上一题表现 · Q1 缓存基础 · 4.5/5</div>
+        <div class="pc-t">击穿 / 雪崩 / 穿透三点都答到，防护方案准确 → Grader 判定「答得好」，决定加深至主从复制层验证"精通"边界。</div>
+      </div>
+
+      <div class="rubric-row">
+        <span class="rr-l">评分要点</span>
+        <span class="chip mono">惰性删除</span><span class="chip mono">定期删除采样</span><span class="chip mono">主从 DEL 传播</span><span class="chip mono">从库不主动过期</span>
+      </div>
+
+      <div class="ans">
+        <div class="ans-box">
+          <div class="ph">输入你的回答…</div>
+          <div class="ans-foot">
+            <span class="comp-hint" style="font-size:12px;color:var(--ink-400);">建议先答机制，再补主从协调细节</span>
+            <button class="btn btn-dark btn-sm" style="height:38px;padding:0 18px;">提交回答 →</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- harness runtime -->
+    <aside class="runtime">
+      <div class="rt-head">
+        <svg viewBox="0 0 24 24" fill="none" width="16" height="16"><rect x="3" y="3" width="7" height="7" rx="1.5" stroke="#A5B4FC" stroke-width="1.7"/><rect x="14" y="3" width="7" height="7" rx="1.5" stroke="#A5B4FC" stroke-width="1.7"/><rect x="3" y="14" width="7" height="7" rx="1.5" stroke="#A5B4FC" stroke-width="1.7"/><rect x="14" y="14" width="7" height="7" rx="1.5" stroke="#A5B4FC" stroke-width="1.7"/></svg>
+        <span class="rt-t">Harness Runtime</span>
+        <span class="rt-live"><span class="lv"></span>LIVE</span>
+      </div>
+      <div class="rt-body">
+        <!-- subagents -->
+        <div>
+          <div class="rt-sec-h">子 Agent 委派 · 隔离上下文</div>
+          <div class="subagent">
+            <div class="sa-top"><span class="sa-ic" style="background:rgba(99,102,241,.2);color:#A5B4FC;"><svg viewBox="0 0 24 24" fill="none" width="15" height="15"><path d="M9 3h6l1 4-2 2 2 2-1 4H9l-1-4 2-2-2-2z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg></span><span class="sa-name">Examiner</span><span class="sa-status" style="background:rgba(52,211,153,.18);color:#34D399;">已返回</span></div>
+            <div class="sa-line">为 {Redis, 中高难度} 设计深挖题，经 RAG 查题库去重后返回 1 道。</div>
+            <div class="sa-tools"><span class="sa-tool">search_questions()</span><span class="sa-tool">lookup_jd()</span></div>
+          </div>
+          <div class="subagent">
+            <div class="sa-top"><span class="sa-ic" style="background:rgba(245,158,11,.2);color:#FCD34D;"><svg viewBox="0 0 24 24" fill="none" width="15" height="15"><path d="M12 3v18M5 8l7-3 7 3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 8v6a7 4 0 0014 0V8" stroke="currentColor" stroke-width="1.6"/></svg></span><span class="sa-name">Grader</span><span class="sa-status" style="background:rgba(148,163,184,.18);color:var(--ink-300);">等待回答</span></div>
+            <div class="sa-line">将在用户回答后启动，只回 {分数, 弱点标签, 反馈}，不污染主上下文。</div>
+            <div class="sa-tools"><span class="sa-tool">record_answer()</span></div>
+          </div>
+        </div>
+
+        <!-- memory -->
+        <div>
+          <div class="rt-sec-h">记忆事件 · 本轮</div>
+          <div style="margin-top:9px;">
+            <div class="mem-evt"><span class="me-tag" style="background:rgba(99,102,241,.2);color:#A5B4FC;">EPISODIC</span><span class="me-t">写入 <b>Q1 表现</b>：缓存三连答对 · salience 0.7</span></div>
+            <div class="mem-evt"><span class="me-tag" style="background:rgba(52,211,153,.18);color:#34D399;">SEMANTIC</span><span class="me-t">更新画像：<b>缓存基础 → 已验证强</b></span></div>
+            <div class="mem-evt"><span class="me-tag" style="background:rgba(234,88,12,.22);color:#FDBA74;">PROCEDURAL</span><span class="me-t">触发规则：<b>简历"精通"→ 必须深挖</b></span></div>
+          </div>
+        </div>
+
+        <!-- context -->
+        <div style="margin-top:auto;">
+          <div class="rt-sec-h">上下文窗口 · Assembler</div>
+          <div class="ctxbar">
+            <div class="cb-track">
+              <div style="width:14%;background:#6366F1;"></div>
+              <div style="width:10%;background:#818CF8;"></div>
+              <div style="width:9%;background:#34D399;"></div>
+              <div style="width:18%;background:#FBBF24;"></div>
+              <div style="width:22%;background:#F87171;"></div>
+            </div>
+            <div class="cb-row"><span>32.4K / 128K tokens</span><b>缓存前缀 33%</b></div>
+            <div class="pin-note"><svg viewBox="0 0 24 24" fill="none" width="13" height="13"><path d="M12 17v5M9 3h6l-1 6 3 3H7l3-3z" stroke="#FDBA74" stroke-width="1.6" stroke-linejoin="round"/></svg><span style="color:#FDBA74;">系统人设 · 岗位 rubric 已 pinned，压缩不动</span></div>
+          </div>
+        </div>
+      </div>
+    </aside>
+  </div>
+</div>
+
+</body>
+</html>
