@@ -44,8 +44,14 @@ def build_app(store: SessionStore, question_bank=None, position_bank=None,
               analyze_resume=None, user_bank=None, history_bank=None,
               token_store=None, resume_store=None,
               analyze_resume_text=None, job_store=None,
-              vector_index_syncer=None) -> FastAPI:
-    app = FastAPI(title="OfferAgent API", version="0.0.0")
+              vector_index_syncer=None,
+              docs_url="/docs", redoc_url="/redoc",
+              openapi_url="/openapi.json") -> FastAPI:
+    # docs_url/redoc_url/openapi_url 传 None 即关闭对应路由 (生产环境用,
+    # 由 factory 依 INTERVIEWFORGE_EXPOSE_DOCS 决定; 默认保持开启便于本地调试)
+    app = FastAPI(title="OfferAgent API", version="0.0.0",
+                  docs_url=docs_url, redoc_url=redoc_url,
+                  openapi_url=openapi_url)
 
     def _sync_upsert(question) -> None:
         """写库后同步向量索引 (仅 chroma 模式有 syncer); 失败仅告警不回滚 MySQL。"""

@@ -361,13 +361,24 @@ def create_app() -> FastAPI:
                                                    model_client.embed)
 
     # 组装 FastAPI app: 挂载所有路由 (会话 + admin + 认证/历史 + 岗位广场)
+    # 接口文档开关: INTERVIEWFORGE_EXPOSE_DOCS=0 关闭 /docs /redoc /openapi.json
+    # (默认 1 开启, 方便本地; 生产 .env 设 0, 避免公网暴露全部接口清单)
+    _expose_docs = os.getenv("INTERVIEWFORGE_EXPOSE_DOCS",
+                             "1").strip().lower() in {"1", "true", "yes"}
+    _docs_kwargs = (
+        {"docs_url": "/docs", "redoc_url": "/redoc",
+         "openapi_url": "/openapi.json"}
+        if _expose_docs else
+        {"docs_url": None, "redoc_url": None, "openapi_url": None}
+    )
     app = build_app(SessionStore(factory), question_bank=admin_question_bank,
                     position_bank=pos_bank, analyze_resume=analyze_resume,
                     user_bank=user_bank, history_bank=history_bank,
                     token_store=token_store, resume_store=resume_store,
                     analyze_resume_text=analyze_resume_text,
                     job_store=job_store,
-                    vector_index_syncer=vector_index_syncer)
+                    vector_index_syncer=vector_index_syncer,
+                    **_docs_kwargs)
     app.router.lifespan_context = lifespan
     # CORS: 仅允许本地 Vite 开发服务器 (5173) 直连
     app.add_middleware(
