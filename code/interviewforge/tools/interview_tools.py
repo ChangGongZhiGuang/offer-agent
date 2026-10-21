@@ -22,7 +22,7 @@ def make_search_questions(retriever: Callable | None = None) -> Tool:
             return retriever(role=role, topic=topic, difficulty=difficulty)
         return [{"question_id": "stub-1",
                  "question": f"[stub] {role}/{topic} 示例题",
-                 "difficulty": difficulty or "medium"}]
+                 "difficulty": difficulty or "medium", "fu": ""}]
 
     return Tool(spec, _run)
 
@@ -52,14 +52,19 @@ def make_record_answer(memory: MemoryService) -> Tool:
                     "score": {"type": "int", "required": True},
                     "notes": {"type": "str", "required": False},
                     "weakness_tags": {"type": "list", "required": False},
-                    "dimension": {"type": "str", "required": False}},
+                    "dimension": {"type": "str", "required": False},
+                    "is_follow_up": {"type": "bool", "required": False},
+                    "parent_question_id": {"type": "str", "required": False}},
     )
 
-    def _run(question_id, score, notes="", weakness_tags=None, dimension=None):
+    def _run(question_id, score, notes="", weakness_tags=None, dimension=None,
+             is_follow_up=False, parent_question_id=None):
         memory.remember(MemoryItem(
             kind=MemoryKind.EPISODIC,
             content={"question_id": question_id, "score": score, "notes": notes,
-                     "weakness_tags": weakness_tags or [], "dimension": dimension},
+                     "weakness_tags": weakness_tags or [], "dimension": dimension,
+                     "is_follow_up": bool(is_follow_up),
+                     "parent_question_id": parent_question_id},
             salience=float(score),
         ))
         return {"recorded": question_id, "score": score}

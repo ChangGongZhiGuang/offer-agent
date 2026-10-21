@@ -30,7 +30,7 @@ def test_search_questions_returns_hit_with_reference(pool):
                     {"role": "后端", "topic": "redis", "query": "分布式锁"})
     assert isinstance(res, list) and res
     item = res[0]
-    assert {"question_id", "question", "difficulty", "reference_answer"} <= set(item)
+    assert {"question_id", "question", "difficulty", "reference_answer", "fu"} <= set(item)
     assert item["reference_answer"]
 
 

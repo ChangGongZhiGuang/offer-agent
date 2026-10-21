@@ -45,6 +45,7 @@ class SearchAdapter:
         self.last_id: str | None = None                         # 当轮命中的题目 ID
         self.last_question: str | None = None                   # 当轮命中的题目原文
         self.last_reference_answer: str | None = None           # 参考答案, 回流给 Grader 做评分依据
+        self.last_fu: str = ""                                  # 命中题目的追问引导 (供状态机预埋/追问)
         self._next_query: str | None = None                     # Planner 注入的一次性 query (用完即清)
 
     def set_next_query(self, query: str | None) -> None:
@@ -60,7 +61,7 @@ class SearchAdapter:
 
         流程: 收集已问 ID → 构造查询 → 硬过滤 → 向量检索 → 角色降级 → 返回
 
-        返回: [{"question_id", "question", "difficulty"}]
+        返回: [{"question_id", "question", "difficulty", "fu"}]
               无结果时返回空列表并将 last_* 置空。
         """
         # 1) 从 episodic 记忆收集已问题目 ID, 传给底层去重
@@ -88,9 +89,11 @@ class SearchAdapter:
             self.last_id = None
             self.last_question = None
             self.last_reference_answer = None
+            self.last_fu = ""
             return []
         self.last_id = q.id
         self.last_question = q.stem
         self.last_reference_answer = q.answer
+        self.last_fu = q.fu or ""
         return [{"question_id": q.id, "question": q.stem,
-                 "difficulty": q.difficulty}]
+                 "difficulty": q.difficulty, "fu": self.last_fu}]

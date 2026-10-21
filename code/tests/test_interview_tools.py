@@ -98,3 +98,19 @@ def test_record_answer_persists_dimension(tmp_path):
     tool.run(question_id="be-1", score=4, notes="ok", weakness_tags=["x"], dimension="缓存层")
     item = mem.episodic.all()[-1]
     assert item.content["dimension"] == "缓存层"
+
+
+def test_record_answer_persists_follow_up_flags(tmp_path):
+    """追问回合的链标记必须落进 episodic, 供报告嵌套归档。"""
+    mem = _memory(tmp_path)
+    tool = make_record_answer(mem)
+    tool(question_id="be-1-fu1", score=2, notes="追问没答上",
+         is_follow_up=True, parent_question_id="be-1")
+    item = mem.episodic.all()[-1]
+    assert item.content["is_follow_up"] is True
+    assert item.content["parent_question_id"] == "be-1"
+    # 主问路径默认值
+    tool(question_id="be-1", score=4)
+    main = mem.episodic.all()[-1]
+    assert main.content["is_follow_up"] is False
+    assert main.content["parent_question_id"] is None

@@ -42,7 +42,8 @@ class StartRequest(BaseModel):
     profile: str = ""                                  # 候选人背景描述 (自由文本)
     jd_keywords: list[str] = []                        # 职位描述关键词
     profile_struct: CandidateProfileModel | None = None  # 结构化画像 (可选, 替代自由文本)
-    num_questions: int = Field(default=3, ge=1, le=20)  # 计划提问数量 (1~20)
+    num_questions: int = Field(default=3, ge=1, le=20)  # 计划提问数量 (1~20, 不含追问)
+    max_follow_ups: int = Field(default=1, ge=0, le=2)  # 每题追问次数上限 (0=关闭追问)
 
 
 class StartResponse(BaseModel):
@@ -76,6 +77,11 @@ class AnswerResponse(BaseModel):
     score: int                    # 本题得分 (0~100)
     weakness_tags: list[str]      # 本题暴露的能力短板标签集合
     feedback: str                 # 面试官评语 / 参考答案
+    # ── 追问信号 ──
+    is_follow_up: bool = False             # 本次被评的是追问而非主题
+    follow_up_question: str | None = None  # 评完后紧接的追问题干 (非空则继续作答)
+    follow_up_of: str | None = None        # 追问所属主问 id
+    follow_up_done: bool = False           # 追问链已闭合, 可进下一题
 
 
 # ── 面试会话: 报告与状态 ───────────────────────────────────────
@@ -91,6 +97,7 @@ class ReportResponse(BaseModel):
     summary: str = ""                                        # 总结评语
     suggestions: list[str] = Field(default_factory=list)     # 改进建议列表
     qa: list[dict] = Field(default_factory=list)             # 逐题问答流水 (题文/答案/得分/评语/维度)
+    follow_up_total: int = 0                                 # 全场追问总次数
 
 
 class StatusResponse(BaseModel):

@@ -68,13 +68,14 @@ logger.info("questions_server 就绪, retriever=%s",
 
 @mcp.tool()
 def search_questions(role: str, topic: str, query: str = "") -> list[dict]:
-    """按岗位/主题硬过滤 + 语义 query 重排, 返回 [{question_id, question, difficulty, reference_answer}]。"""
+    """按岗位/主题硬过滤 + 语义 query 重排, 返回 [{question_id, question, difficulty, reference_answer, fu}]。"""
     query_text = query or f"{role} {topic}"
     where = {k: v for k, v in (("role", role), ("topic", topic)) if v}
     hits = _RETRIEVER.retrieve_many(query_text, top_k=5, where=where or None)
     logger.info("search_questions role=%s topic=%s -> %d 条命中", role, topic, len(hits))
     return [{"question_id": q.id, "question": q.stem,
-             "difficulty": q.difficulty, "reference_answer": q.answer}
+             "difficulty": q.difficulty, "reference_answer": q.answer,
+             "fu": q.fu or ""}
             for q in hits]
 
 

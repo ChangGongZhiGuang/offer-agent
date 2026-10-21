@@ -192,6 +192,7 @@ def build_app(store: SessionStore, question_bank=None, position_bank=None,
             summary=rpt.get("summary", ""),
             suggestions=rpt.get("suggestions", []),
             qa=rpt.get("qa", []),
+            follow_up_total=rpt.get("follow_up_total", 0),
         )
         return HistoryDetailResponse(session_id=entry.session_id, role=entry.role,
                                      topic=entry.topic, created_at=entry.created_at,
@@ -264,6 +265,7 @@ def build_app(store: SessionStore, question_bank=None, position_bank=None,
         uid = _current_user_id(request)
         sid = store.create(role=req.role, topic=req.topic, profile=req.profile,
                            num_questions=req.num_questions,
+                           max_follow_ups=req.max_follow_ups,
                            jd_keywords=req.jd_keywords, profile_struct=ps,
                            user_id=uid)
         return StartResponse(session_id=sid, role=req.role, topic=req.topic)
@@ -302,7 +304,11 @@ def build_app(store: SessionStore, question_bank=None, position_bank=None,
                                 detail=f"session halted: {loop.state.halted}")
         return AnswerResponse(score=result["score"],
                               weakness_tags=result.get("weakness_tags", []),
-                              feedback=result.get("feedback", ""))
+                              feedback=result.get("feedback", ""),
+                              is_follow_up=result.get("is_follow_up", False),
+                              follow_up_question=result.get("follow_up_question"),
+                              follow_up_of=result.get("follow_up_of"),
+                              follow_up_done=result.get("follow_up_done", False))
 
     @app.post("/sessions/{session_id}/finish", response_model=ReportResponse)
     def finish(session_id: str) -> ReportResponse:
@@ -333,6 +339,7 @@ def build_app(store: SessionStore, question_bank=None, position_bank=None,
             summary=report.get("summary", ""),
             suggestions=report.get("suggestions", []),
             qa=report.get("qa", []),
+            follow_up_total=report.get("follow_up_total", 0),
         )
 
     @app.get("/sessions/{session_id}", response_model=StatusResponse)

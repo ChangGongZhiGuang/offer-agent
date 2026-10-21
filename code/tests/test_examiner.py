@@ -54,6 +54,25 @@ def test_examiner_calls_search_questions():
     assert captured["called"] == ("后端", "redis", "medium")  # 默认难度
 
 
+def test_examiner_followup_branch_skips_search_and_uses_chain():
+    """出追问分支: 不调 search_questions, prompt 含上一题/回答/评语/追问方向/题库 fu。"""
+    captured = {}
+    model = _FakeModel('{"question": "追问: 锁续约怎么做?", "rubric": "r2", '
+                       '"expected_points": []}')
+    ex = Examiner(model, _exam_registry(captured), methodology="追问树: 答得好加深一层")
+    res = ex.run(SubTask(goal="出追问", inputs={
+        "role": "后端", "topic": "redis", "dimension": "缓存层",
+        "prev_question": "如何实现分布式锁?", "prev_answer": "用 SETNX",
+        "feedback": "不错但缺边界", "weakness_tags": ["边界"],
+        "follow_up_hint": "深挖续期机制", "fu_hint": "答得好→追问红锁"}))
+    assert res.structured["question"] == "追问: 锁续约怎么做?"
+    assert "called" not in captured                     # 未查题库
+    blob = " ".join(m.content for m in model.seen)
+    for needle in ("如何实现分布式锁?", "用 SETNX", "不错但缺边界",
+                   "深挖续期机制", "答得好→追问红锁", "追问树"):
+        assert needle in blob
+
+
 def test_examiner_forwards_difficulty_to_search_tool():
     captured = {}
     ex = Examiner(_FakeModel(_EXAMINER_JSON), _exam_registry(captured))

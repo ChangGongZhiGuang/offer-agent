@@ -41,6 +41,24 @@ def test_grader_returns_structured():
     assert "4" in res.summary
 
 
+def test_grader_defaults_follow_up_fields_when_missing():
+    """旧格式输出(无追问判定字段)必须兼容: 默认不追。"""
+    g = Grader(_FakeModel(_GRADER_JSON), tool_registry=None)
+    res = g.run(SubTask(goal="评分", inputs={"question": "q", "answer": "a"}))
+    assert res.structured["need_follow_up"] is False
+    assert res.structured["follow_up_hint"] == ""
+
+
+def test_grader_prompt_asks_follow_up_judgement():
+    """评分 prompt 必须顺带索要 need_follow_up 判定, 不新增独立 LLM 调用。"""
+    model = _FakeModel(_GRADER_JSON)
+    Grader(model, tool_registry=None).run(
+        SubTask(goal="评分", inputs={"question": "q", "answer": "a"}))
+    prompt_text = "\n".join(m.content for m in model.seen)
+    assert "need_follow_up" in prompt_text
+    assert "follow_up_hint" in prompt_text
+
+
 def test_grader_injects_answer_into_prompt():
     model = _FakeModel(_GRADER_JSON)
     g = Grader(model, tool_registry=None)
@@ -125,11 +143,16 @@ def test_grader_passes_dimension_to_record_answer():
                     parameters={"question_id": {"type": "str", "required": True},
                                 "score": {"type": "int", "required": True}})
 
-    def _rec(question_id, score, notes="", weakness_tags=None, dimension=None):
-        captured.update(dimension=dimension)
+    def _rec(question_id, score, notes="", weakness_tags=None, dimension=None,
+             is_follow_up=False, parent_question_id=None):
+        captured.update(dimension=dimension, is_follow_up=is_follow_up,
+                        parent_question_id=parent_question_id)
         return {"recorded": question_id}
 
     reg.register(Tool(spec, _rec))
     Grader(FakeModel(), reg).run(SubTask(goal="评分", inputs={
         "question": "Q", "answer": "A", "question_id": "be-1", "dimension": "存储层"}))
     assert captured["dimension"] == "存储层"
+    # 未标追问时默认 False/None (主问路径)
+    assert captured["is_follow_up"] is False
+    assert captured["parent_question_id"] is None

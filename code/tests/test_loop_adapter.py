@@ -58,6 +58,27 @@ def test_adapter_returns_question_dict(tmp_path):
     assert adapter.last_id == "be-1"
 
 
+def test_adapter_exposes_fu_guidance(tmp_path):
+    """题库追问引导 fu 随检索行与 last_fu 透出, 供状态机预埋/追问消费。"""
+    vs, qb = InMemoryVectorStore(), InMemoryQuestionBank()
+    seed_questions(qb, vs, _embed, [
+        Question(id="be-9", role="后端", topic="redis",
+                 stem="Redis 分布式锁如何续期", answer="watchdog",
+                 difficulty="hard", fu="答得好 → 追问红锁争议"),
+    ])
+    mem = _memory(tmp_path)
+    adapter = SearchAdapter(Retriever(vs, qb, _embed), mem)
+    out = adapter(role="后端", topic="redis")
+    assert out[0]["fu"] == "答得好 → 追问红锁争议"
+    assert adapter.last_fu == "答得好 → 追问红锁争议"
+    # 空结果时 last_fu 同步清空, 防残留旧引导 (把 be-9 标记为已问过)
+    mem.remember(MemoryItem(kind=MemoryKind.EPISODIC,
+                            content={"question_id": "be-9", "score": 4}))
+    out2 = adapter(role="后端", topic="redis")
+    assert out2 == []
+    assert adapter.last_fu == ""
+
+
 def test_adapter_dedups_via_episodic(tmp_path):
     mem = _memory(tmp_path)
     # be-1 已问过 -> 检索 redis 时应被排除, 返回次优 be-2

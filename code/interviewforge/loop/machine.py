@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from interviewforge.context.compaction import ContextState
-from interviewforge.loop.planner import Planner
+from interviewforge.loop.planner import Plan, Planner, should_follow_up
 from interviewforge.loop.types import Bounds, HaltReason, Phase, LoopState
 from interviewforge.loop.verify import verify_plan, verify_question, verify_score
 from interviewforge.memory.base import MemoryService
@@ -112,6 +112,10 @@ class InterviewLoop:
             ref_answer = getattr(self.search_adapter, "last_reference_answer", None)
             if ref_answer:
                 structured["reference_answer"] = ref_answer
+            # 题库追问引导 (fu) 随题带入: 主问链未闭合时供追问题目生成参考
+            fu_hint = getattr(self.search_adapter, "last_fu", "") or ""
+            if fu_hint:
+                structured["fu_hint"] = fu_hint
             structured.setdefault("dimension", dimension)
             self._to(Phase.VERIFY)
             gate = verify_question(structured, self.state.asked_ids)
@@ -132,11 +136,19 @@ class InterviewLoop:
 
     # ---- 评分 ----
     def submit_answer(self, answer: str) -> dict | None:
+        """作答入口: 主题/追问两条路径共用评分循环, 评分后决定是否继续追问。
+
+        返回值除评分字段外携带追问信号:
+        follow_up_question (紧接的追问题干) / follow_up_of (所属主问) /
+        is_follow_up (本次被评的是追问) / follow_up_done (追问链已闭合)。
+        """
         if self._halted():
             return None
-        if self.state.current_question is None:
+        if self.state.current_question is None and self.state.pending_follow_up is None:
             raise RuntimeError("no current question to answer")
-        q = self.state.current_question
+        # 追问优先: pending 非空时本次回答针对追问, 否则针对主题
+        q = self.state.pending_follow_up or self.state.current_question
+        is_fu = self.state.pending_follow_up is not None
         self.state.recent_messages.append(Message(role=Role.USER, content=answer))
         self.state.replan_count = 0
         while True:
@@ -153,7 +165,9 @@ class InterviewLoop:
                 "question": q["question"], "rubric": q.get("rubric", ""),
                 "answer": answer, "question_id": q["question_id"],
                 "reference_answer": q.get("reference_answer", ""),
-                "dimension": q.get("dimension")}))
+                "dimension": q.get("dimension"),
+                "is_follow_up": is_fu,
+                "parent_question_id": q.get("parent_question_id")}))
             structured = sub.structured
             self._to(Phase.VERIFY)
             gate = verify_score(structured)
@@ -161,21 +175,98 @@ class InterviewLoop:
                 if not self._replan(gate.reason):
                     return None
                 continue
-            self.state.current_question = None
-            # 逐题问答流水: 留题文 + 候选人答案 + 得分/评语, 供历史回看
-            self.state.qa_log.append({
+            # 逐题问答流水: 题文 + 答案 + 得分/评语; 追问回合标记链归属
+            entry = {
                 "question_id": q.get("question_id"),
                 "question": q.get("question", ""),
                 "answer": answer,
                 "score": structured.get("score"),
                 "feedback": structured.get("feedback", ""),
                 "dimension": q.get("dimension"),
-            })
+                "is_follow_up": is_fu,
+            }
+            if is_fu:
+                entry["parent_question_id"] = q.get("parent_question_id")
+            self.state.qa_log.append(entry)
             self.state.recent_messages.append(
                 Message(role=Role.ASSISTANT, content=structured.get("feedback", "")))
+            self.state.pending_follow_up = None
+            # 追问决策: Grader 的 LLM 判定 + 规则边界双重把关, 再受硬上限约束
+            result = dict(structured)
+            result["is_follow_up"] = is_fu
+            parent_qid = (q.get("parent_question_id") if is_fu
+                          else q.get("question_id"))
+            follow_up = None
+            if parent_qid and should_follow_up(self.state, structured,
+                                               bounds=self.bounds,
+                                               parent_qid=parent_qid) \
+                    and self.state.turn + self.state.total_follow_ups < self.bounds.max_turns:
+                follow_up = self._generate_follow_up(q, answer, structured, parent_qid)
+            if follow_up is not None:
+                self.state.pending_follow_up = follow_up
+                result["follow_up_question"] = follow_up["question"]
+                result["follow_up_of"] = parent_qid
+                # 主问链未闭合: current_question 保留, 供下一层追问继承参考答案
+            else:
+                self.state.current_question = None
+                if is_fu:
+                    result["follow_up_done"] = True
             self._to(Phase.RESPOND)
             self._maybe_compact()
             self._to(Phase.IDLE)
+            return result
+
+    # ---- 追问生成小循环 (PLAN→EXECUTE→VERIFY, 失败走既有 _replan) ----
+    def _generate_follow_up(self, prev_q: dict, prev_answer: str,
+                            score_result: dict, parent_qid: str) -> dict | None:
+        """基于上一题问答链生成一道追问; 无可用时返回 None (链闭合)。"""
+        st = self.state
+        depth = st.follow_up_counts.get(parent_qid, 0) + 1
+        while True:
+            self._to(Phase.PLAN)
+            planner_fu = getattr(self.planner, "plan_follow_up", None)
+            plan = planner_fu(st) if planner_fu is not None else Plan(
+                intent="follow_up", tool_calls=[],
+                expected_outcome="一道针对上一答的追问")
+            gate = verify_plan(plan, remaining_questions=1,
+                               max_tool_calls=self.bounds.max_tool_calls_per_turn)
+            if not gate.passed:
+                if not self._replan(gate.reason):
+                    return None
+                continue
+            self._to(Phase.EXECUTE)
+            main = st.current_question or {}
+            sub = self.examiner.run(SubTask(goal="出追问", inputs={
+                "role": st.role, "topic": st.topic,
+                "dimension": prev_q.get("dimension") or main.get("dimension"),
+                "profile": st.profile,
+                "profile_struct": st.profile_struct,
+                "prev_question": prev_q.get("question", ""),
+                "prev_answer": prev_answer,
+                "feedback": score_result.get("feedback", ""),
+                "weakness_tags": score_result.get("weakness_tags", []),
+                "follow_up_hint": score_result.get("follow_up_hint", ""),
+                "fu_hint": prev_q.get("fu_hint") or main.get("fu_hint", "")}))
+            structured = dict(sub.structured)
+            structured["question_id"] = f"{parent_qid}-fu{depth}"
+            structured["parent_question_id"] = parent_qid
+            structured["depth"] = depth
+            # 追问评分沿用主题命中的参考答案/维度, 保证 Grader/报告口径一致
+            if "reference_answer" not in structured and main.get("reference_answer"):
+                structured["reference_answer"] = main["reference_answer"]
+            structured.setdefault("dimension", prev_q.get("dimension"))
+            self._to(Phase.VERIFY)
+            gate = verify_question(structured, st.asked_ids)
+            if not gate.passed:
+                if not self._replan(gate.reason):
+                    return None
+                continue
+            st.follow_up_counts[parent_qid] = depth
+            st.total_follow_ups += 1
+            st.recent_messages.append(Message(role=Role.ASSISTANT,
+                                              content=structured["question"]))
+            self._record("follow_up", {"parent": parent_qid, "depth": depth,
+                                       "question_id": structured["question_id"]})
             return structured
 
     # ---- 收尾 ----

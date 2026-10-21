@@ -10,6 +10,7 @@ const emit = defineEmits(['finished']);
 const {
   messages, answer, busy, error, phase,
   timerText, aiMessages, progressItems,
+  answeringFollowUp, chainJustClosed,
   threadRef, submit, nextQuestion, finishAll, handleKeydown,
   ask,
 } = useInterview(props.session, emit);
@@ -65,6 +66,7 @@ const {
                 <template v-else>{{ item.index }}</template>
               </span>
               <span class="qp-name">{{ item.title }}</span>
+              <span v-if="item.fuCount" class="qp-fu" :title="'本题已追问 ' + item.fuCount + ' 次'">↷×{{ item.fuCount }}</span>
               <span v-if="item.score !== null" class="qp-score">{{ item.score }}</span>
               <span v-else-if="item.status === 'cur'" class="badge badge-ember" style="height:18px;padding:0 7px;font-size:10px;flex:none;">进行中</span>
             </div>
@@ -112,7 +114,13 @@ const {
               <span class="avatar avatar-ai">AI</span>
               <div class="bub">
                 <div class="qmeta">
-                  <span class="badge badge-brand">Q{{ msg.qIndex + 1 }}</span>
+                  <span v-if="msg.is_follow_up" class="badge badge-ember fu-badge">
+                    <svg viewBox="0 0 24 24" fill="none" width="11" height="11">
+                      <path d="M13 5l7 7-7 7M4 12h15" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    追问 · 顺着你的回答 Q{{ msg.qIndex + 1 }}
+                  </span>
+                  <span v-else class="badge badge-brand">Q{{ msg.qIndex + 1 }}</span>
                   <span v-if="msg.grade" class="badge badge-green">
                     <svg viewBox="0 0 24 24" fill="none" width="11" height="11">
                       <path d="M5 13l4 4L19 7" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
@@ -156,7 +164,8 @@ const {
 
         <div class="composer" v-if="phase === 'asked'">
           <div class="comp-box">
-            <textarea v-model="answer" class="comp-textarea" placeholder="输入你的回答…（可以先讲思路，再补细节）" rows="3" @keydown="handleKeydown"></textarea>
+            <div v-if="answeringFollowUp" class="fu-hint">面试官正在深挖上一题 — 答完这道追问才会进入下一题</div>
+            <textarea v-model="answer" class="comp-textarea" :placeholder="answeringFollowUp ? '回答追问…（答得卡可先说思路，面试官会给你提示）' : '输入你的回答…（可以先讲思路，再补细节）'" rows="3" @keydown="handleKeydown"></textarea>
             <div class="comp-foot">
               <div class="comp-hint"><kbd>Enter</kbd> 提交 &nbsp;·&nbsp; <kbd>Shift</kbd>+<kbd>Enter</kbd> 换行 &nbsp;·&nbsp; 支持 Markdown</div>
               <button class="btn btn-primary btn-sm" :disabled="busy || !answer.trim()" @click="submit">{{ busy ? '评分中…' : '提交回答 →' }}</button>
@@ -165,7 +174,7 @@ const {
         </div>
 
         <div v-else-if="phase === 'graded'" class="next-bar">
-          <span class="muted" style="font-size:13px;">已记录并评分，继续下一题或直接结束</span>
+          <span class="muted" style="font-size:13px;">{{ chainJustClosed ? '追问链已完成并归档，继续下一题或直接结束' : '已记录并评分，继续下一题或直接结束' }}</span>
           <div style="display:flex;gap:10px;">
             <button class="btn btn-ghost btn-sm" :disabled="busy" @click="finishAll">结束并出报告</button>
             <button class="btn btn-primary btn-sm" :disabled="busy" @click="nextQuestion">{{ busy ? '处理中…' : '下一题 →' }}</button>
@@ -177,6 +186,30 @@ const {
 </template>
 
 <style scoped>
+/* 追问回合小标记：进度栏徽章 + 回答区顶部提示条（scoped 样式不跨组件共享，在本组件自行定义） */
+.qp-fu {
+  flex: none;
+  font-family: var(--font-mono, monospace);
+  font-size: 10px;
+  color: var(--ember-600, #ea580c);
+  background: var(--ember-50, #fff7ed);
+  border: 1px solid var(--ember-100, #ffedd5);
+  border-radius: 6px;
+  padding: 1px 5px;
+  line-height: 1.4;
+}
+.fu-badge {
+  letter-spacing: 0.02em;
+}
+.fu-hint {
+  font-size: 12px;
+  color: var(--ember-700, #c2410c);
+  background: var(--ember-50, #fff7ed);
+  border: 1px dashed var(--ember-200, #fed7aa);
+  border-radius: 8px;
+  padding: 5px 10px;
+  margin-bottom: 8px;
+}
 /* AI 反馈正文：整行块级排版，自然换行，不再用固定高度的 chip 导致与标签重叠 */
 .bub .rubric .fb-text {
   width: 100%;

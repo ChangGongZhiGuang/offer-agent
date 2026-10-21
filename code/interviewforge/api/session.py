@@ -50,6 +50,7 @@ class SessionFactory:
 
     def build(self, *, session_id: str, role: str, topic: str,
               profile: str = "", num_questions: int = 3,
+              max_follow_ups: int = 1,
               jd_keywords: list[str] | None = None,
               dimension: str | None = None,
               profile_struct=None) -> InterviewLoop:
@@ -109,12 +110,13 @@ class SessionFactory:
                                   token_budget=self.token_budget)
 
         # ── 6) InterviewLoop 状态机 ─────────────────────────────────
-        #    串联出题→回答→评分→循环, 由 loop.ask_question / submit_answer 驱动
+        #    串联出题→回答→评分→(可选追问)→循环, 由 loop.ask_question / submit_answer 驱动
         loop = InterviewLoop(
             memory=memory, examiner=examiner, grader=grader, planner=RulePlanner(),
             registry=registry, search_adapter=adapter,
             transcript=Transcript(sdir / "transcript.jsonl"),
-            bounds=Bounds(max_questions=num_questions),
+            bounds=Bounds(max_questions=num_questions,
+                          max_follow_ups_per_question=max_follow_ups),
             pipeline=pipeline,
             token_budget=self.token_budget,
         )
@@ -144,7 +146,8 @@ class SessionStore:
         return self._factory.base_dir
 
     def create(self, *, role: str, topic: str, profile: str = "",
-               num_questions: int = 3, jd_keywords: list[str] | None = None,
+               num_questions: int = 3, max_follow_ups: int = 1,
+               jd_keywords: list[str] | None = None,
                profile_struct=None, user_id: str | None = None) -> str:
         """创建新会话: 委托 factory.build(), 返回随机 session_id。
 
@@ -153,8 +156,8 @@ class SessionStore:
         sid = uuid4().hex
         self._sessions[sid] = self._factory.build(
             session_id=sid, role=role, topic=topic, profile=profile,
-            num_questions=num_questions, jd_keywords=jd_keywords,
-            profile_struct=profile_struct)
+            num_questions=num_questions, max_follow_ups=max_follow_ups,
+            jd_keywords=jd_keywords, profile_struct=profile_struct)
         self._owners[sid] = user_id
         return sid
 
