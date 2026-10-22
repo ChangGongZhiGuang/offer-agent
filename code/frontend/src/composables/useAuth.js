@@ -1,6 +1,7 @@
 import { ref, computed } from 'vue';
 import {
   login as apiLogin, register as apiRegister, logout as apiLogout,
+  changePassword as apiChangePassword, deactivate as apiDeactivate,
   getMe, getStoredUser, clearAuth, getToken,
 } from '../api.js';
 
@@ -60,6 +61,41 @@ export function useAuth() {
     user.value = null;
   }
 
+  // 服务端在改密/注销成功后已吊销全部 token, 本地同步清登录态 → 回登录页
+  function _dropSession() {
+    clearAuth();
+    token.value = '';
+    user.value = null;
+  }
+
+  async function changePassword(oldPwd, newPwd) {
+    busy.value = true;
+    error.value = '';
+    try {
+      await apiChangePassword(oldPwd, newPwd);
+      _dropSession();
+    } catch (e) {
+      error.value = e.message || String(e);
+      throw e;
+    } finally {
+      busy.value = false;
+    }
+  }
+
+  async function deactivateAccount(password) {
+    busy.value = true;
+    error.value = '';
+    try {
+      await apiDeactivate(password);
+      _dropSession();
+    } catch (e) {
+      error.value = e.message || String(e);
+      throw e;
+    } finally {
+      busy.value = false;
+    }
+  }
+
   // 首屏校验 token 有效性: 失效则清除本地登录态
   async function refreshMe() {
     if (!token.value) { ready.value = true; return; }
@@ -77,6 +113,6 @@ export function useAuth() {
 
   return {
     token, user, ready, busy, error, isAuthenticated, isAdmin, isRoot,
-    login, register, logout, refreshMe,
+    login, register, logout, changePassword, deactivateAccount, refreshMe,
   };
 }

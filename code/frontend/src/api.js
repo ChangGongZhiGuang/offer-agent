@@ -69,6 +69,18 @@ export function getMe() {
   return request('/auth/me');
 }
 
+// 修改密码 (需登录 + 旧密码); 成功后服务端已吊销全部 token
+export function changePassword(oldPassword, newPassword) {
+  return request('/auth/change-password', {
+    method: 'POST', body: JSON.stringify({ old_password: oldPassword, new_password: newPassword }),
+  });
+}
+
+// 自助注销 (软删除, 需当前密码二次确认)
+export function deactivate(password) {
+  return request('/auth/deactivate', { method: 'POST', body: JSON.stringify({ password }) });
+}
+
 // ── 历史记录 ────────────────────────────────────────
 export function listHistory() {
   return request('/history');
@@ -230,6 +242,15 @@ export function setUserRole(id, role) {
   return request(`/admin/users/${encodeURIComponent(id)}/role`, {
     method: 'PUT', body: JSON.stringify({ role }),
   });
+}
+
+// root 注销他人 (软删除) / 恢复已注销账号
+export function adminDeactivateUser(id) {
+  return request(`/admin/users/${encodeURIComponent(id)}`, { method: 'DELETE' });
+}
+
+export function adminRestoreUser(id) {
+  return request(`/admin/users/${encodeURIComponent(id)}/restore`, { method: 'POST' });
 }
 
 // ── Trace 重放 ────────────────────────────────────────────────

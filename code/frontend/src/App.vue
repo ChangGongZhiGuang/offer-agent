@@ -13,9 +13,62 @@ import AdminUsers from './components/AdminUsers.vue';
 import { useAuth } from './composables/useAuth.js';
 
 // 登录态 (模块级单例)
-const { user, isAuthenticated, isAdmin, isRoot, logout, refreshMe } = useAuth();
+const { user, isAuthenticated, isAdmin, isRoot, logout, refreshMe,
+        changePassword, deactivateAccount, busy: authBusy, error: authError } = useAuth();
 const authOpen = ref(false);        // 登录/注册弹层开关
 const userMenuOpen = ref(false);    // 右上角用户下拉开关
+const accountOpen = ref(false);     // 账号设置弹层开关
+
+// 改密码表单
+const oldPwd = ref('');
+const newPwd = ref('');
+const confirmPwd = ref('');
+const pwdFormError = ref('');
+const pwdDone = ref('');       // 成功提示 (展示后引导用户重登)
+
+// 注销表单 (二次确认: 当前密码 + 勾选知悉)
+const cancelPwd = ref('');
+const cancelAck = ref(false);
+const cancelError = ref('');
+
+function closeAccountModal() {
+  accountOpen.value = false;
+  oldPwd.value = newPwd.value = confirmPwd.value = '';
+  cancelPwd.value = '';
+  cancelAck.value = false;
+  pwdFormError.value = cancelError.value = pwdDone.value = '';
+  authError.value = '';
+  // 会话已被服务端吊销时登录态为空, 停留在业务页会处处 401 → 回岗位广场
+  if (!isAuthenticated.value && ['history', 'resume', 'users'].includes(view.value)) {
+    view.value = 'jobboard';
+  }
+}
+
+async function submitChangePassword() {
+  pwdFormError.value = '';
+  authError.value = '';
+  if (!oldPwd.value) { pwdFormError.value = '请输入旧密码'; return; }
+  if (newPwd.value.length < 6) { pwdFormError.value = '新密码至少 6 位'; return; }
+  if (newPwd.value !== confirmPwd.value) { pwdFormError.value = '两次输入的新密码不一致'; return; }
+  if (newPwd.value === oldPwd.value) { pwdFormError.value = '新密码不能与旧密码相同'; return; }
+  try {
+    await changePassword(oldPwd.value, newPwd.value);
+    pwdDone.value = '密码已修改, 所有设备需重新登录';
+    oldPwd.value = newPwd.value = confirmPwd.value = '';
+  } catch (_) { /* 错误已写入 authError */ }
+}
+
+async function submitDeactivate() {
+  cancelError.value = '';
+  authError.value = '';
+  if (!cancelAck.value) { cancelError.value = '请先勾选确认注销后果'; return; }
+  if (!cancelPwd.value) { cancelError.value = '请输入当前密码完成二次确认'; return; }
+  try {
+    await deactivateAccount(cancelPwd.value);
+    closeAccountModal();
+    alert('账号已注销。历史与简历数据已保留, 如需找回可联系管理员恢复。');
+  } catch (_) { /* 错误已写入 authError */ }
+}
 
 onMounted(refreshMe);
 
@@ -145,6 +198,7 @@ function navTo(target) {
             <button @click="navTo('resume'); userMenuOpen = false">我的简历</button>
             <button @click="navTo('history'); userMenuOpen = false">历史记录</button>
             <button v-if="isRoot" @click="navTo('users'); userMenuOpen = false">用户管理</button>
+            <button @click="accountOpen = true; userMenuOpen = false">账号设置</button>
             <button class="danger" @click="onLogout">退出登录</button>
           </div>
         </div>
@@ -192,6 +246,58 @@ function navTo(target) {
 
   <!-- 登录 / 注册 弹层 -->
   <AuthView v-if="authOpen" @success="onAuthSuccess" @close="authOpen = false" />
+
+  <!-- 账号设置弹层: 修改密码 + 注销账号 -->
+  <div v-if="accountOpen" class="acct-mask" @click.self="closeAccountModal">
+    <div class="acct-modal">
+      <div class="acct-h">
+        <h3>账号设置</h3>
+        <button class="acct-x" @click="closeAccountModal">×</button>
+      </div>
+      <div class="acct-b">
+        <!-- 修改密码 -->
+        <section class="acct-sec">
+          <h4>修改密码</h4>
+          <div class="acct-field">
+            <label>旧密码 <i>*</i></label>
+            <input v-model="oldPwd" type="password" placeholder="当前密码" autocomplete="current-password" />
+          </div>
+          <div class="acct-field">
+            <label>新密码 <i>*</i></label>
+            <input v-model="newPwd" type="password" placeholder="至少 6 位" autocomplete="new-password" />
+          </div>
+          <div class="acct-field">
+            <label>确认新密码 <i>*</i></label>
+            <input v-model="confirmPwd" type="password" placeholder="再输入一次" autocomplete="new-password"
+                   @keyup.enter="submitChangePassword" />
+          </div>
+          <div v-if="pwdFormError || authError" class="acct-err">{{ pwdFormError || authError }}</div>
+          <div v-if="pwdDone" class="acct-ok">{{ pwdDone }}</div>
+          <button class="btn btn-primary acct-btn" :disabled="authBusy" @click="submitChangePassword">
+            {{ authBusy ? '处理中…' : '确认修改' }}
+          </button>
+        </section>
+
+        <!-- 注销账号 (危险区) -->
+        <section class="acct-sec danger-zone">
+          <h4>注销账号</h4>
+          <p class="acct-tip">注销后无法登录; 历史/简历数据保留, 可联系管理员恢复。</p>
+          <label class="acct-ack">
+            <input v-model="cancelAck" type="checkbox" />
+            我已知悉注销后需联系管理员才能恢复使用
+          </label>
+          <div class="acct-field">
+            <label>当前密码 <i>*</i></label>
+            <input v-model="cancelPwd" type="password" placeholder="输入当前密码二次确认" autocomplete="current-password" />
+          </div>
+          <div v-if="cancelError" class="acct-err">{{ cancelError }}</div>
+          <button class="btn acct-btn btn-danger" :disabled="authBusy" @click="submitDeactivate">
+            {{ authBusy ? '处理中…' : '确认注销账号' }}
+          </button>
+        </section>
+      </div>
+    </div>
+  </div>
 </template>
 
 <style scoped>
@@ -225,4 +331,34 @@ function navTo(target) {
 }
 .user-dropdown button:hover { background: var(--ink-50, #F8FAFC); }
 .user-dropdown button.danger { color: var(--red-600, #DC2626); }
+
+/* 账号设置弹层: scoped 样式不跨组件共享, 在此自定义一份 */
+.acct-mask { position: fixed; inset: 0; background: rgba(15,23,42,.45); display: flex; align-items: center; justify-content: center; z-index: 60; }
+.acct-modal { background: var(--paper, #fff); border-radius: 14px; box-shadow: 0 20px 50px rgba(15,23,42,.22); width: 420px; max-width: calc(100vw - 40px); max-height: 86vh; overflow: auto; }
+.acct-h { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid var(--ink-100, #F1F5F9); }
+.acct-h h3 { font-size: 16px; margin: 0; }
+.acct-x { border: none; background: none; font-size: 20px; line-height: 1; cursor: pointer; color: var(--ink-500, #64748B); padding: 2px 6px; border-radius: 6px; }
+.acct-x:hover { background: var(--ink-50, #F8FAFC); }
+.acct-b { padding: 16px 20px 20px; display: flex; flex-direction: column; gap: 18px; }
+.acct-sec { display: flex; flex-direction: column; gap: 10px; }
+.acct-sec h4 { font-size: 14px; margin: 0; color: var(--ink-700, #334155); }
+.acct-field { display: flex; flex-direction: column; gap: 4px; }
+.acct-field label { font-size: 12px; font-weight: 600; color: var(--ink-600, #475569); }
+.acct-field label i { color: var(--red-600, #DC2626); font-style: normal; }
+.acct-field input {
+  height: 36px; padding: 0 10px; border: 1px solid var(--ink-200, #E2E8F0); border-radius: 8px;
+  font-family: inherit; font-size: 13px; color: var(--ink-900, #0F172A); background: var(--paper, #fff);
+  outline: none; transition: border-color .15s;
+}
+.acct-field input:focus { border-color: var(--brand-400, #A5B4FC); }
+.acct-btn { align-self: flex-start; padding: 8px 18px; border-radius: 8px; border: none; cursor: pointer; font-size: 13px; font-weight: 600; }
+.acct-btn:disabled { opacity: .6; cursor: not-allowed; }
+.btn-danger, .acct-btn.btn-danger { background: var(--red-600, #DC2626); color: #fff; }
+.btn-danger:hover:not(:disabled), .acct-btn.btn-danger:hover:not(:disabled) { background: var(--red-700, #B91C1C); }
+.danger-zone { border: 1px solid rgba(220,38,38,.25); border-radius: 10px; padding: 14px; background: var(--red-50, #FEF2F2); }
+.acct-tip { margin: 0; font-size: 12px; color: var(--red-700, #B91C1C); }
+.acct-ack { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--ink-700, #334155); cursor: pointer; }
+.acct-ack input { accent-color: var(--red-600, #DC2626); }
+.acct-err { padding: 8px 10px; border-radius: 8px; font-size: 12px; background: var(--red-50, #FEF2F2); color: var(--red-700, #B91C1C); border: 1px solid rgba(220,38,38,.18); }
+.acct-ok { padding: 8px 10px; border-radius: 8px; font-size: 12px; background: var(--green-50, #F0FDF4); color: var(--green-700, #15803D); }
 </style>

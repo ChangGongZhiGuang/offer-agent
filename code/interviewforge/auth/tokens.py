@@ -32,3 +32,11 @@ class TokenStore:
         """登出: 移除该 token。"""
         with self._lock:
             self._token_to_user.pop(token, None)
+
+    def revoke_all(self, user_id: str) -> int:
+        """吊销某用户全部 token (改密/注销后强制重新登录); 返回吊销数。"""
+        with self._lock:
+            dead = [t for t, uid in self._token_to_user.items() if uid == user_id]
+            for t in dead:
+                self._token_to_user.pop(t, None)
+        return len(dead)

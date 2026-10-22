@@ -175,6 +175,7 @@ class UserRoleOut(BaseModel):
     user_id: str
     username: str
     role: str
+    status: str = "active"   # "active" | "deleted" (已注销用户在列表中保留供恢复)
 
 
 class SetRoleRequest(BaseModel):
@@ -193,6 +194,17 @@ class RegisterRequest(BaseModel):
 class LoginRequest(BaseModel):
     """POST /auth/login 登录请求。"""
     username: str
+    password: str
+
+
+class ChangePasswordRequest(BaseModel):
+    """POST /auth/change-password 修改密码请求 (需登录 + 旧密码二次确认)。"""
+    old_password: str
+    new_password: str            # 明文, 后端校验强度后哈希落库
+
+
+class DeactivateRequest(BaseModel):
+    """POST /auth/deactivate 注销账号请求: 携带当前密码作二次确认。"""
     password: str
 
 

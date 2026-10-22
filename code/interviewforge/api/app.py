@@ -11,6 +11,7 @@ from fastapi import FastAPI, HTTPException, Request, UploadFile, File, Form
 from interviewforge.api.schemas import (
     AnswerRequest, AnswerResponse, AuthUser, CandidateProfileModel,
     HistoryDetailResponse, HistoryItem,
+    ChangePasswordRequest, DeactivateRequest,
     JobIn, JobOut, LoginRequest, LoginResponse,
     PositionIn, PositionOut, QuestionIn, QuestionOut,
     QuestionResponse, RegisterRequest, ReportResponse,
@@ -90,13 +91,19 @@ def build_app(store: SessionStore, question_bank=None, position_bank=None,
         return token_store.resolve(_bearer(request))
 
     def _current_user(request: Request) -> "User | None":
-        """解析当前登录用户对象 (含 role); 未登录/无 user_bank 则 None。"""
+        """解析当前登录用户对象 (含 role); 未登录/无 user_bank/已注销则 None。
+
+        已注销 (status=deleted) 在此集中拦截 → 所有登录态接口自然 401。
+        """
         if user_bank is None:
             return None
         uid = _current_user_id(request)
         if uid is None:
             return None
-        return user_bank.get_by_id(uid)
+        user = user_bank.get_by_id(uid)
+        if user is not None and user.status == "deleted":
+            return None
+        return user
 
     def _require_role(request: Request, allowed: set[str]) -> "User":
         """要求当前登录用户角色属于 allowed; 否则 401/403。"""
@@ -137,6 +144,9 @@ def build_app(store: SessionStore, question_bank=None, position_bank=None,
         # 统一 401: 不区分“用户不存在/密码错”, 避免枚举
         if user is None or not verify_password(req.password, user.password_hash):
             raise HTTPException(status_code=401, detail="用户名或密码错误")
+        if user.status == "deleted":
+            # 密码正确但账号已注销: 给出明确提示 (可联系管理员恢复)
+            raise HTTPException(status_code=403, detail="该账号已注销")
         token = token_store.issue(user.id)
         return LoginResponse(token=token, user=AuthUser(user_id=user.id,
                                                         username=user.username,
@@ -158,6 +168,37 @@ def build_app(store: SessionStore, question_bank=None, position_bank=None,
         user = user_bank.get_by_id(uid) if user_bank is not None else None
         return AuthUser(user_id=uid, username=user.username if user else "",
                         role=user.role if user else "user")
+
+    @app.post("/auth/change-password", response_model=dict)
+    def change_password(req: ChangePasswordRequest, request: Request) -> dict:
+        """修改密码: 需登录 + 旧密码二次确认; 成功后吊销全部 token 强制重登。"""
+        user = _current_user(request)
+        if user is None:
+            raise HTTPException(status_code=401, detail="not authenticated")
+        if not verify_password(req.old_password, user.password_hash):
+            raise HTTPException(status_code=401, detail="旧密码不正确")
+        if not validate_password(req.new_password):
+            raise HTTPException(status_code=400, detail="新密码至少 6 位")
+        if req.new_password == req.old_password:
+            raise HTTPException(status_code=400, detail="新密码不能与旧密码相同")
+        if not user_bank.set_password_hash(user.id, hash_password(req.new_password)):
+            raise HTTPException(status_code=404, detail="user not found")
+        revoked = token_store.revoke_all(user.id) if token_store is not None else 0
+        logger.info("用户 [%s] 修改密码, 吊销 %d 个 token", user.username, revoked)
+        return {"ok": True}
+
+    @app.post("/auth/deactivate", response_model=dict)
+    def deactivate(request: Request, req: DeactivateRequest) -> dict:
+        """自助注销账号 (软删除): 需登录 + 当前密码二次确认; 历史/简历数据保留。"""
+        user = _current_user(request)
+        if user is None:
+            raise HTTPException(status_code=401, detail="not authenticated")
+        if not verify_password(req.password, user.password_hash):
+            raise HTTPException(status_code=401, detail="密码不正确")
+        user_bank.set_status(user.id, "deleted")
+        revoked = token_store.revoke_all(user.id) if token_store is not None else 0
+        logger.info("用户 [%s] 自助注销, 吊销 %d 个 token", user.username, revoked)
+        return {"ok": True}
 
     # ── 历史记录 (需登录) ────────────────────────────────
     @app.get("/history", response_model=list[HistoryItem])
@@ -495,7 +536,8 @@ def build_app(store: SessionStore, question_bank=None, position_bank=None,
         @app.get("/admin/users", response_model=list[UserRoleOut])
         def list_users(request: Request) -> list[UserRoleOut]:
             _require_role(request, {"root"})
-            return [UserRoleOut(user_id=u.id, username=u.username, role=u.role)
+            return [UserRoleOut(user_id=u.id, username=u.username, role=u.role,
+                                status=u.status)
                     for u in user_bank.list_all()]
 
         @app.put("/admin/users/{user_id}/role", response_model=UserRoleOut)
@@ -516,5 +558,34 @@ def build_app(store: SessionStore, question_bank=None, position_bank=None,
                         target.username, target.role, req.role)
             return UserRoleOut(user_id=target.id, username=target.username,
                                role=req.role)
+
+        @app.delete("/admin/users/{user_id}", response_model=dict)
+        def deactivate_user(user_id: str, request: Request) -> dict:
+            """root 注销他人 (软删除); 本人/root 不可由此注销。"""
+            actor = _require_role(request, {"root"})
+            if user_id == actor.id:
+                raise HTTPException(status_code=400, detail="不能注销自己, 请使用自助注销")
+            target = user_bank.get_by_id(user_id)
+            if target is None:
+                raise HTTPException(status_code=404, detail="user not found")
+            if target.role == "root":
+                raise HTTPException(status_code=400, detail="超级管理员不可注销")
+            user_bank.set_status(user_id, "deleted")
+            revoked = token_store.revoke_all(user_id) if token_store is not None else 0
+            logger.info("root 注销用户 [%s], 吊销 %d 个 token (by %s)",
+                        target.username, revoked, actor.username)
+            return {"ok": True}
+
+        @app.post("/admin/users/{user_id}/restore", response_model=UserRoleOut)
+        def restore_user(user_id: str, request: Request) -> UserRoleOut:
+            """root 恢复已注销账号。"""
+            actor = _require_role(request, {"root"})
+            target = user_bank.get_by_id(user_id)
+            if target is None:
+                raise HTTPException(status_code=404, detail="user not found")
+            user_bank.set_status(user_id, "active")
+            logger.info("root 恢复用户 [%s] (by %s)", target.username, actor.username)
+            return UserRoleOut(user_id=target.id, username=target.username,
+                               role=target.role, status="active")
 
     return app

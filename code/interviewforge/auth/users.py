@@ -21,10 +21,12 @@ class User:
     password_hash: str
     created_at: str = ""
     role: str = "user"          # "user" | "admin" | "root"
+    status: str = "active"      # "active" | "deleted" (注销=软删除, 数据保留可恢复)
 
     def to_dict(self) -> dict:
         return {"id": self.id, "username": self.username,
-                "created_at": self.created_at, "role": self.role}
+                "created_at": self.created_at, "role": self.role,
+                "status": self.status}
 
 
 class UserBank(Protocol):
@@ -33,6 +35,8 @@ class UserBank(Protocol):
     def get_by_id(self, user_id: str) -> User | None: ...
     def list_all(self) -> list[User]: ...
     def set_role(self, user_id: str, role: str) -> bool: ...
+    def set_password_hash(self, user_id: str, password_hash: str) -> bool: ...
+    def set_status(self, user_id: str, status: str) -> bool: ...
 
 
 class InMemoryUserBank:
@@ -69,6 +73,20 @@ class InMemoryUserBank:
         user.role = role          # _by_name 与 _by_id 指向同一对象, 改一处即可
         return True
 
+    def set_password_hash(self, user_id: str, password_hash: str) -> bool:
+        user = self._by_id.get(user_id)
+        if user is None:
+            return False
+        user.password_hash = password_hash
+        return True
+
+    def set_status(self, user_id: str, status: str) -> bool:
+        user = self._by_id.get(user_id)
+        if user is None:
+            return False
+        user.status = status
+        return True
+
 
 class MySQLUserBank:
     """生产: 表 users(id, username UNIQUE, password_hash, created_at)。懒导入 PyMySQL。"""
@@ -98,21 +116,24 @@ class MySQLUserBank:
                     username VARCHAR(64) UNIQUE,
                     password_hash VARCHAR(255),
                     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                    role VARCHAR(16) NOT NULL DEFAULT 'user'
+                    role VARCHAR(16) NOT NULL DEFAULT 'user',
+                    status VARCHAR(16) NOT NULL DEFAULT 'active'
                 ) CHARACTER SET utf8mb4
                 """
             )
-            # 迁移: 老表无 role 列时补上 (1060 = ER_DUP_FIELDNAME 则忽略)
-            cur.execute(
-                """
-                SELECT COUNT(*) FROM information_schema.columns
-                WHERE table_schema = DATABASE()
-                  AND table_name = 'users' AND column_name = 'role'
-                """
-            )
-            if (cur.fetchone() or [0])[0] == 0:
+            # 迁移: 老表无 role/status 列时补上 (1060 = ER_DUP_FIELDNAME 则忽略)
+            for column, ddl in (("role", "ADD COLUMN role VARCHAR(16) NOT NULL DEFAULT 'user'"),
+                                ("status", "ADD COLUMN status VARCHAR(16) NOT NULL DEFAULT 'active'")):
                 cur.execute(
-                    "ALTER TABLE users ADD COLUMN role VARCHAR(16) NOT NULL DEFAULT 'user'")
+                    """
+                    SELECT COUNT(*) FROM information_schema.columns
+                    WHERE table_schema = DATABASE()
+                      AND table_name = 'users' AND column_name = %s
+                    """,
+                    (column,),
+                )
+                if (cur.fetchone() or [0])[0] == 0:
+                    cur.execute(f"ALTER TABLE users {ddl}")
 
     def create(self, username: str, password_hash: str, role: str = "user") -> User:
         uid = uuid4().hex
@@ -131,9 +152,10 @@ class MySQLUserBank:
                                            password_hash=password_hash, role=role)
 
     def get_by_username(self, username: str) -> User | None:
+        # 不过滤 deleted: login 端点需据此给出"已注销"明确提示
         with self._connect() as conn, conn.cursor() as cur:
             cur.execute(
-                "SELECT id, username, password_hash, created_at, role FROM users WHERE username = %s",
+                "SELECT id, username, password_hash, created_at, role, status FROM users WHERE username = %s",
                 (username,),
             )
             row = cur.fetchone()
@@ -142,7 +164,7 @@ class MySQLUserBank:
     def get_by_id(self, user_id: str) -> User | None:
         with self._connect() as conn, conn.cursor() as cur:
             cur.execute(
-                "SELECT id, username, password_hash, created_at, role FROM users WHERE id = %s",
+                "SELECT id, username, password_hash, created_at, role, status FROM users WHERE id = %s",
                 (user_id,),
             )
             row = cur.fetchone()
@@ -151,13 +173,24 @@ class MySQLUserBank:
     def list_all(self) -> list[User]:
         with self._connect() as conn, conn.cursor() as cur:
             cur.execute(
-                "SELECT id, username, password_hash, created_at, role FROM users ORDER BY created_at")
+                "SELECT id, username, password_hash, created_at, role, status FROM users ORDER BY created_at")
             rows = cur.fetchall()
         return [self._row_to_user(r) for r in rows if r is not None]
 
     def set_role(self, user_id: str, role: str) -> bool:
         with self._connect() as conn, conn.cursor() as cur:
             cur.execute("UPDATE users SET role = %s WHERE id = %s", (role, user_id))
+            return cur.rowcount > 0
+
+    def set_password_hash(self, user_id: str, password_hash: str) -> bool:
+        with self._connect() as conn, conn.cursor() as cur:
+            cur.execute("UPDATE users SET password_hash = %s WHERE id = %s",
+                        (password_hash, user_id))
+            return cur.rowcount > 0
+
+    def set_status(self, user_id: str, status: str) -> bool:
+        with self._connect() as conn, conn.cursor() as cur:
+            cur.execute("UPDATE users SET status = %s WHERE id = %s", (status, user_id))
             return cur.rowcount > 0
 
     @staticmethod
@@ -168,4 +201,5 @@ class MySQLUserBank:
         return User(id=row[0], username=row[1], password_hash=row[2],
                     created_at=created.isoformat(sep=" ", timespec="seconds")
                     if hasattr(created, "isoformat") else str(created or ""),
-                    role=row[4] if len(row) > 4 and row[4] else "user")
+                    role=row[4] if len(row) > 4 and row[4] else "user",
+                    status=row[5] if len(row) > 5 and row[5] else "active")
